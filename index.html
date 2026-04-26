@@ -15,6 +15,7 @@
             background-color: #000; color: white;
             font-family: "Microsoft JhengHei", sans-serif;
             overflow: hidden; touch-action: none;
+            -webkit-touch-callout: none; /* 避免預設長按選單干擾 */
         }
 
         /* 背景與 UI 層次 */
@@ -25,53 +26,52 @@
         .screen { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none !important; }
 
-        /* 身份選擇 */
-        .select-wrapper { position: relative; margin-bottom: 50px; pointer-events: auto; }
+        /* 身份選擇 (名字置中) */
+        .select-wrapper { position: relative; margin-bottom: 50px; pointer-events: auto; display: inline-block; }
         #user-select {
             appearance: none; -webkit-appearance: none; background: transparent; border: none; color: white;
-            font-size: 48px; font-weight: bold; padding-right: 40px; cursor: pointer; outline: none; text-align: center;
+            font-size: 48px; font-weight: bold; 
+            padding: 0 40px; /* 左右對稱留白以保持視覺置中 */
+            cursor: pointer; outline: none; 
+            text-align: center; text-align-last: center; /* 強制文字置中 */
         }
-        .custom-arrow { position: absolute; right: 0; top: 60%; transform: translateY(-50%); font-size: 24px; color: #888; pointer-events: none; }
+        .custom-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 24px; color: #888; pointer-events: none; }
+        
         #btn-enter { background: transparent; border: 1.5px solid #fff; color: #fff; padding: 10px 40px; font-size: 18px; cursor: pointer; pointer-events: auto; }
 
         /* 抽卡舞台 */
         #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
 
-        /* 切開動畫與包裝容器 */
+        /* 切開動畫與包裝容器 (75x120比例，佔屏幕70%) */
         .pack-wrapper {
-            position: absolute; bottom: -100%; width: 70vh; max-width: 400px; height: 100vh; max-height: 600px;
+            position: absolute; bottom: -100%; 
+            height: 70vh; /* 佔據屏幕 70% 高度 */
+            aspect-ratio: 75 / 120; /* 75mm x 120mm 比例 */
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
-        .pack-wrapper.active { bottom: 10%; pointer-events: auto; }
+        .pack-wrapper.active { bottom: 15%; pointer-events: auto; }
         
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-size: cover; background-position: center; background-repeat: no-repeat;
             transition: transform 0.8s ease-in, opacity 0.8s ease-in;
         }
-        .split-left { clip-path: polygon(0 0, 100% 0, 0 100%); } /* 左半斜切 */
-        .split-right { clip-path: polygon(100% 0, 100% 100%, 0 100%); } /* 右半斜切 */
+        .split-left { clip-path: polygon(0 0, 100% 0, 0 100%); }
+        .split-right { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
 
-        /* 偵測區域 (上方 1/3) */
-        #slash-zone {
-            position: absolute; top: 0; left: 15%; width: 70%; height: 35%;
-            z-index: 200; pointer-events: auto;
-        }
+        /* 偵測區域 */
+        #slash-zone { position: absolute; top: 0; left: 15%; width: 70%; height: 35%; z-index: 200; pointer-events: auto; }
 
-        /* 3D 翻轉卡片容器 */
+        /* 3D 翻轉卡片容器 (63x88比例) */
         .card-container {
-            position: absolute; width: 50vh; max-width: 280px; aspect-ratio: 63/88; /* 寶可夢卡比例 */
+            position: absolute; width: 50vh; max-width: 280px; aspect-ratio: 63/88; 
             perspective: 1000px; display: none; z-index: 100; opacity: 0;
             transition: opacity 1s ease-out, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translateY(100px) scale(0.8); /* 初始在較低位置 */
-            pointer-events: auto; cursor: pointer;
+            transform: translateY(100px) scale(0.8); pointer-events: auto; cursor: pointer;
         }
         .card-container.reveal { opacity: 1; transform: translateY(0) scale(1); }
         
-        .card-inner {
-            position: relative; width: 100%; height: 100%;
-            transition: transform 0.8s; transform-style: preserve-3d;
-        }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s; transform-style: preserve-3d; }
         .card-front, .card-back {
             position: absolute; width: 100%; height: 100%;
             backface-visibility: hidden; border-radius: 12px;
@@ -82,7 +82,7 @@
         .is-flipped { transform: rotateY(180deg); }
 
         /* 底部導航 */
-        .bottom-nav { position: absolute; bottom: 40px; display: flex; gap: 20px; pointer-events: auto; z-index: 250;}
+        .bottom-nav { position: absolute; bottom: 40px; display: flex; gap: 20px; pointer-events: auto; z-index: 250; }
         .draw-btn { background: #fff; color: #000; border: none; padding: 12px 30px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; }
 
         /* 收藏頁面 */
@@ -90,12 +90,44 @@
         .card-slot { width: 100%; aspect-ratio: 63/88; background: #222; border-radius: 5px; overflow: hidden; }
         .card-slot img { width: 100%; height: 100%; object-fit: cover; opacity: 0.2; }
         .card-slot.owned img { opacity: 1; }
+
+        /* 全螢幕放大預覽 (新增) */
+        #fullscreen-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+        }
+        #fullscreen-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        #fullscreen-card-img {
+            height: 65vh; max-height: 800px; aspect-ratio: 63/88;
+            border-radius: 15px; object-fit: cover;
+            -webkit-user-select: none; user-select: none;
+            /* 讓長按可觸發手機系統的下載圖片選單 */
+            pointer-events: auto; 
+        }
+
+        #save-hint {
+            color: #fff; margin-top: 15px; font-size: 16px; font-weight: bold;
+            opacity: 0; transition: opacity 0.3s ease; height: 20px;
+        }
+
+        .overlay-controls { margin-top: 20px; display: flex; gap: 20px; pointer-events: auto; }
+        .pill-btn {
+            background: transparent; color: #fff;
+            border: 2px solid #fff; border-radius: 50px;
+            padding: 10px 40px; font-size: 18px; font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
 <canvas id="bg-canvas"></canvas>
-<canvas id="particle-canvas"></canvas> <div id="ui-layer">
+<canvas id="particle-canvas"></canvas> 
+
+<div id="ui-layer">
     <section id="login-screen" class="screen">
         <div class="select-wrapper">
             <select id="user-select">
@@ -114,7 +146,7 @@
     <section id="main-screen" class="screen hidden">
         <div id="stage">
             <div id="slash-zone" class="hidden"></div>
-            </div>
+        </div>
         <div class="bottom-nav">
             <button class="draw-btn" onclick="prepareDraw(1)">單抽</button>
             <button class="draw-btn" onclick="prepareDraw(10)">十連抽</button>
@@ -131,8 +163,17 @@
     </section>
 </div>
 
+<div id="fullscreen-overlay" class="hidden">
+    <img id="fullscreen-card-img" src="" alt="放大卡片">
+    <div id="save-hint">請長按上方圖片進行儲存</div>
+    <div class="overlay-controls">
+        <button class="pill-btn" onclick="showSaveHint()">儲存</button>
+        <button class="pill-btn" onclick="closeFullscreen()">返回</button>
+    </div>
+</div>
+
 <script>
-    // --- 資源路徑設定 (使用 Raw 連結，確保 PNG 大寫) ---
+    // --- 資源路徑設定 ---
     const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
     const IMG_PACK = BASE_URL + "packs/pack.png";
     const IMG_BACK = BASE_URL + "back/back.png";
@@ -140,7 +181,7 @@
     let currentUser = "";
     let drawnCards = [];
     let isSlashing = false;
-    let gameState = "login"; // 'login' | 'drawing'
+    let gameState = "login"; 
 
     // --- 背景與特效 Canvas 系統 ---
     const bgCanvas = document.getElementById('bg-canvas');
@@ -163,7 +204,6 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // 初始化背景元素
     for(let i=0; i<60; i++) {
         baseParticles.push({ x: Math.random()*bgCanvas.width, y: Math.random()*bgCanvas.height, s: Math.random()*2, v: 0.5+Math.random()*1 });
     }
@@ -176,7 +216,6 @@
     }
 
     function renderLoop() {
-        // 1. 繪製底層背景 (Spotlight)
         bgCtx.fillStyle = '#000';
         bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
         const grad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/3, 50, bgCanvas.width/2, bgCanvas.height/3, bgCanvas.width*0.8);
@@ -184,7 +223,6 @@
         bgCtx.fillStyle = grad;
         bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
 
-        // 2. 繪製基本光點粒子
         bgCtx.fillStyle = 'rgba(255,255,255,0.4)';
         baseParticles.forEach(p => {
             p.y -= p.v;
@@ -192,7 +230,6 @@
             bgCtx.beginPath(); bgCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); bgCtx.fill();
         });
 
-        // 3. 繪製飛舞卡背 (僅在抽卡階段)
         if(gameState === 'drawing') {
             flyingBacks.forEach(c => {
                 c.x += c.vx; c.y += c.vy; c.r += c.vr;
@@ -205,33 +242,31 @@
             });
         }
 
-        // 4. 特效層 (清空並重繪)
         pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-        
-        // 繪製劃動軌跡
+
         if(isSlashing && slashPath.length > 1) {
-            pCtx.shadowBlur = 20; pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
+            pCtx.shadowBlur = 20;
+            pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
             pCtx.lineWidth = 6; pCtx.lineCap = "round";
             pCtx.beginPath(); pCtx.moveTo(slashPath[0].x, slashPath[0].y);
             slashPath.forEach(p => pCtx.lineTo(p.x, p.y)); pCtx.stroke();
             pCtx.shadowBlur = 0;
         }
 
-        // 繪製爆炸光芒粒子
         for(let i=blastParticles.length-1; i>=0; i--) {
             let p = blastParticles[i];
             p.x += p.vx; p.y += p.vy; p.life -= 0.02;
             if(p.life <= 0) { blastParticles.splice(i, 1); continue; }
             pCtx.fillStyle = p.color;
             pCtx.globalAlpha = p.life;
-            pCtx.beginPath(); pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
+            pCtx.beginPath();
+            pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
         }
         pCtx.globalAlpha = 1;
 
         requestAnimationFrame(renderLoop);
     }
     requestAnimationFrame(renderLoop);
-
 
     // --- UI 與流程控制 ---
     function showScreen(id) {
@@ -243,40 +278,35 @@
     document.getElementById('btn-enter').onclick = () => {
         currentUser = document.getElementById('user-select').value;
         document.getElementById('user-title').innerText = currentUser + " 的收藏";
-        gameState = 'drawing'; // 切換背景狀態
+        gameState = 'drawing';
         showScreen('main-screen');
     };
 
     function prepareDraw(num) {
         const stage = document.getElementById('stage');
-        // 清理舞台，保留 slash-zone
         Array.from(stage.children).forEach(child => {
             if(child.id !== 'slash-zone') child.remove();
         });
-        
         drawnCards = [];
         const zone = document.getElementById('slash-zone');
         zone.classList.add('hidden');
 
-        // 生成卡包 (為十連抽準備重疊)
         for(let i=0; i<num; i++) {
             const wrap = document.createElement('div');
             wrap.className = 'pack-wrapper';
             wrap.id = `pack-${i}`;
             wrap.style.zIndex = 50 - i;
-            // 稍微偏移製造重疊感
+            
             let offsetX = num > 1 ? (Math.random()-0.5)*20 : 0;
             let offsetY = num > 1 ? (Math.random()-0.5)*20 : 0;
             wrap.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(${(Math.random()-0.5)*4}deg)`;
             
-            // 準備兩半供物理切開
             wrap.innerHTML = `
                 <div class="pack-half split-left" style="background-image:url(${IMG_PACK})"></div>
                 <div class="pack-half split-right" style="background-image:url(${IMG_PACK})"></div>
             `;
             stage.appendChild(wrap);
             
-            // 決定卡片
             const isRare = Math.random() < 0.03;
             const maxId = isRare ? 9 : 14;
             const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
@@ -295,7 +325,6 @@
         if(document.getElementById('slash-zone').classList.contains('hidden')) return;
         isSlashing = true; slashPath = [{x: e.touches[0].clientX, y: e.touches[0].clientY}];
     });
-
     uiLayer.addEventListener('touchmove', (e) => {
         if(!isSlashing) return;
         const x = e.touches[0].clientX; const y = e.touches[0].clientY;
@@ -304,10 +333,9 @@
         const zoneRect = document.getElementById('slash-zone').getBoundingClientRect();
         if(x > zoneRect.left && x < zoneRect.right && y > zoneRect.top && y < zoneRect.bottom) {
             executeCut();
-            isSlashing = false; // 觸發後停止劃線
+            isSlashing = false;
         }
     });
-
     uiLayer.addEventListener('touchend', () => { isSlashing = false; slashPath = []; });
 
     // --- 物理切開與粒子爆發 ---
@@ -315,19 +343,14 @@
         document.getElementById('slash-zone').classList.add('hidden');
         const packs = document.querySelectorAll('.pack-wrapper');
         let hasRare = drawnCards.some(c => c.type === 'rare');
-
-        // 生成噴發粒子 (根據最高稀有度)
         triggerBlast(hasRare ? '#ffd700' : '#ffffff');
-
+        
         packs.forEach((p, idx) => {
             const left = p.querySelector('.split-left');
             const right = p.querySelector('.split-right');
-            // 兩半傾斜掉落
             left.style.transform = 'translate(-30%, 50%) rotate(-30deg)';
             right.style.transform = 'translate(30%, 50%) rotate(30deg)';
             left.style.opacity = '0'; right.style.opacity = '0';
-
-            // 隨後生成卡片並升起
             setTimeout(() => { showResultCard(idx); }, 500);
         });
     }
@@ -335,7 +358,7 @@
     function triggerBlast(color) {
         for(let i=0; i<80; i++) {
             blastParticles.push({
-                x: window.innerWidth/2, y: window.innerHeight * 0.4, // 約切口位置
+                x: window.innerWidth/2, y: window.innerHeight * 0.4,
                 vx: (Math.random()-0.5) * 15, vy: (Math.random()-0.5) * 15,
                 s: Math.random() * 5 + 2, life: 1, color: color
             });
@@ -349,11 +372,10 @@
         const container = document.createElement('div');
         container.className = 'card-container';
         
-        // 排版處理 (十連抽 vs 單抽)
         if(drawnCards.length > 1) {
-            container.style.width = '25vw'; container.style.maxWidth = '150px';
+            container.style.width = '25vw';
+            container.style.maxWidth = '150px';
             const row = Math.floor(idx / 5); const col = idx % 5;
-            // 簡單網格計算
             container.style.left = `${10 + col * 16}%`;
             container.style.top = `${20 + row * 30}%`;
         }
@@ -370,18 +392,54 @@
         stage.appendChild(container);
         
         container.style.display = 'block';
-        // 觸發升起動畫
         setTimeout(() => { container.classList.add('reveal'); }, 50 * idx);
     }
 
+    // 新增：翻牌及放大邏輯
     function flipCard(el, type, id) {
-        if(el.classList.contains('is-flipped')) return;
-        el.classList.add('is-flipped');
+        // 如果已經翻轉過，再次點擊則觸發放大欣賞
+        if(el.classList.contains('is-flipped')) {
+            openFullscreen(type, id);
+            return;
+        }
         
-        // 記錄到 LocalStorage
+        // 第一次點擊：翻轉並儲存進度
+        el.classList.add('is-flipped');
         let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
         if(!data[type].includes(id)) data[type].push(id);
         localStorage.setItem('porkemon_' + currentUser, JSON.stringify(data));
+    }
+
+    // --- 放大檢視 (Fullscreen Overlay) 功能 ---
+    function openFullscreen(type, id) {
+        const isRare = type === 'rare';
+        const imgSrc = `${BASE_URL}cards_${type}/${id}.PNG`;
+        const overlay = document.getElementById('fullscreen-overlay');
+        const img = document.getElementById('fullscreen-card-img');
+        
+        img.src = imgSrc;
+        img.style.boxShadow = isRare ? 'var(--gold-glow)' : 'var(--white-glow)';
+        
+        overlay.classList.remove('hidden');
+        // 觸發重繪以應用 CSS transition
+        void overlay.offsetWidth; 
+        overlay.classList.add('active');
+    }
+
+    function closeFullscreen() {
+        const overlay = document.getElementById('fullscreen-overlay');
+        overlay.classList.remove('active');
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            document.getElementById('save-hint').style.opacity = '0'; // 重置提示
+        }, 300);
+    }
+
+    function showSaveHint() {
+        const hint = document.getElementById('save-hint');
+        hint.style.opacity = '1';
+        // 3秒後自動隱藏提示
+        setTimeout(() => hint.style.opacity = '0', 3000);
     }
 
     // --- 收藏圖鑑 ---
@@ -393,17 +451,32 @@
         // 顯示 Common (14張)
         for(let i=1; i<=14; i++) {
             const id = i.toString().padStart(3, '0');
+            const isOwned = data.common.includes(id);
             const slot = document.createElement('div');
-            slot.className = `card-slot ${data.common.includes(id) ? 'owned' : ''}`;
+            slot.className = `card-slot ${isOwned ? 'owned' : ''}`;
             slot.innerHTML = `<img src="${BASE_URL}cards_common/${id}.PNG" alt="Common ${id}">`;
+            
+            // 已擁有的卡片可以點擊放大
+            if(isOwned) {
+                slot.onclick = () => openFullscreen('common', id);
+                slot.style.cursor = 'pointer';
+            }
             grid.appendChild(slot);
         }
+        
         // 顯示 Rare (9張)
         for(let i=1; i<=9; i++) {
             const id = i.toString().padStart(3, '0');
+            const isOwned = data.rare.includes(id);
             const slot = document.createElement('div');
-            slot.className = `card-slot ${data.rare.includes(id) ? 'owned' : ''}`;
+            slot.className = `card-slot ${isOwned ? 'owned' : ''}`;
             slot.innerHTML = `<img src="${BASE_URL}cards_rare/${id}.PNG" alt="Rare ${id}">`;
+            
+            // 已擁有的卡片可以點擊放大
+            if(isOwned) {
+                slot.onclick = () => openFullscreen('rare', id);
+                slot.style.cursor = 'pointer';
+            }
             grid.appendChild(slot);
         }
     }
