@@ -5,14 +5,171 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>抽肥豬卡 - Porkémon</title>
     <style>
-        /* 呢度會放 CSS，用嚟整黑色 Spotlight 背景同埋飛飛下嘅卡背 */
-        body, html { margin: 0; padding: 0; background: #000; color: white; overflow: hidden; font-family: sans-serif; }
+        :root {
+            --gold: #ffd700;
+            --white: #ffffff;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: white;
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* 背景 Canvas */
+        #game-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* UI 層 */
+        #ui-layer {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
         .hidden { display: none !important; }
-        
-        /* 核心 Canvas，用嚟畫切卡光芒同動態背景 */
-        #game-canvas { position: fixed; top: 0; left: 0; z-index: 1; }
-        #ui-layer { position: relative; z-index: 10; height: 100vh; pointer-events: none; }
-        button, select { pointer-events: auto; }
+
+        /* 1. 身份選擇頁面 */
+        .select-wrapper {
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        #user-select {
+            appearance: none;
+            -webkit-appearance: none;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 42px;
+            font-weight: bold;
+            padding-right: 40px;
+            cursor: pointer;
+            outline: none;
+            text-align: center;
+        }
+
+        .custom-arrow {
+            position: absolute;
+            right: 0;
+            top: 55%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #888;
+            pointer-events: none;
+        }
+
+        #btn-enter {
+            background: transparent;
+            border: 1.5px solid rgba(255,255,255,0.5);
+            color: white;
+            padding: 10px 35px;
+            font-size: 18px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        /* 2. 主抽卡畫面 */
+        .top-nav {
+            position: absolute;
+            top: 20px;
+            width: 90%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        #display-name { font-size: 20px; font-weight: bold; }
+        .nav-btn { background: rgba(255,255,255,0.1); border: 1px solid white; color: white; padding: 5px 15px; border-radius: 20px; }
+
+        #pack-stage {
+            position: relative;
+            width: 100%;
+            height: 60%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pack-img {
+            position: absolute;
+            bottom: -300px;
+            width: 200px;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), bottom 0.8s;
+            pointer-events: auto;
+        }
+
+        .pack-up { bottom: 25%; }
+
+        /* 切卡偵測區 */
+        #slash-zone {
+            position: absolute;
+            top: 25%;
+            width: 200px;
+            height: 80px; /* 包裝上方 1/3 */
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .bottom-controls {
+            position: absolute;
+            bottom: 50px;
+            display: flex;
+            gap: 20px;
+            pointer-events: auto;
+        }
+
+        .draw-btn {
+            background: white;
+            color: black;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        /* 3. 收藏頁面 */
+        #collection-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 20px;
+            width: 90%;
+            overflow-y: auto;
+            max-height: 70vh;
+            pointer-events: auto;
+        }
+
+        .card-thumb { width: 100%; border-radius: 5px; opacity: 0.3; }
+        .card-thumb.owned { opacity: 1; border: 1px solid var(--gold); }
+
     </style>
 </head>
 <body>
@@ -20,10 +177,8 @@
     <canvas id="game-canvas"></canvas>
 
     <div id="ui-layer">
-        
         <section id="login-screen" class="screen">
-            <div class="center-content">
-                <h1>選擇你的身份</h1>
+            <div class="select-wrapper">
                 <select id="user-select">
                     <option value="Suki">Suki</option>
                     <option value="Nelson">Nelson</option>
@@ -32,57 +187,166 @@
                     <option value="細佬">細佬</option>
                     <option value="Rainbow">Rainbow</option>
                 </select>
-                <button id="btn-enter">進入卡池</button>
+                <div class="custom-arrow">▼</div>
             </div>
+            <button id="btn-enter">進入卡池</button>
         </section>
 
         <section id="main-screen" class="screen hidden">
             <div class="top-nav">
                 <span id="display-name"></span>
-                <button id="btn-collection">我的收藏</button>
+                <button class="nav-btn" onclick="showScreen('collection-screen')">我的收藏</button>
             </div>
-
-            <div id="pack-container">
-                <div id="slash-zone"></div> </div>
-
+            <div id="pack-stage">
+                <div id="slash-zone" class="hidden"></div>
+            </div>
             <div class="bottom-controls">
-                <button id="btn-draw-1">單抽</button>
-                <button id="btn-draw-10">十連抽</button>
+                <button class="draw-btn" onclick="startDraw(1)">單抽</button>
+                <button class="draw-btn" onclick="startDraw(10)">十連抽</button>
             </div>
         </section>
 
         <section id="collection-screen" class="screen hidden">
-            <div class="top-nav">
-                <button id="btn-back-main">返回抽卡</button>
-                <h2>我的圖鑑</h2>
+            <div class="top-nav" style="position:relative; margin-bottom:20px;">
+                <button class="nav-btn" onclick="showScreen('main-screen')">返回</button>
+                <span id="collection-stats">0/23</span>
             </div>
-            
-            <div class="stats-bar">
-                <p>普通卡 (Common): <span id="common-count">0</span> / 14</p>
-                <p>稀有卡 (Rare): <span id="rare-count">0</span> / 9</p>
-            </div>
-
-            <div id="collection-grid">
-                </div>
+            <div id="collection-grid"></div>
         </section>
-
     </div>
 
     <script>
-        // 定義圖片路徑基礎 (GitHub Raw 路徑)
         const GITHUB_BASE = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porke.../main/";
-        const PATHS = {
-            back: GITHUB_BASE + "back/",
-            packs: GITHUB_BASE + "packs/",
-            common: GITHUB_BASE + "cards_common/",
-            rare: GITHUB_BASE + "cards_rare/"
+        let currentUser = "";
+        let isSlashing = false;
+        let startY = 0;
+
+        // 初始化背景效果
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // 簡單背景動畫：光點
+        const particles = Array.from({length: 50}, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            s: Math.random() * 2,
+            v: Math.random() * 0.5
+        }));
+
+        function animate() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Spotlight 效果
+            const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/3, 50, canvas.width/2, canvas.height/3, 400);
+            grad.addColorStop(0, '#222');
+            grad.addColorStop(1, '#000');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0, canvas.width, canvas.height);
+
+            // 畫粒子
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            particles.forEach(p => {
+                p.y -= p.v;
+                if(p.y < 0) p.y = canvas.height;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.s, 0, Math.PI*2);
+                ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // 頁面切換
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            if(id === 'collection-screen') updateCollectionUI();
+        }
+
+        // 登入
+        document.getElementById('btn-enter').onclick = () => {
+            currentUser = document.getElementById('user-select').value;
+            document.getElementById('display-name').innerText = currentUser;
+            showScreen('main-screen');
         };
 
-        // 卡池編號配置
-        const CARD_CONFIG = {
-            common_total: 14, // 001-014
-            rare_total: 9    // 001-009
-        };
+        // 抽卡邏輯
+        function startDraw(count) {
+            const stage = document.getElementById('pack-stage');
+            const zone = document.getElementById('slash-zone');
+            stage.querySelectorAll('.pack-img').forEach(p => p.remove());
+            
+            // 生成卡包 (簡化：十連抽先顯示一個，切開後再處理)
+            const pack = document.createElement('img');
+            pack.src = GITHUB_BASE + "packs/pack.png"; // 請確保 packs 資料夾內檔案名為 pack.png
+            pack.className = "pack-img";
+            stage.appendChild(pack);
+
+            setTimeout(() => {
+                pack.classList.add('pack-up');
+                zone.classList.remove('hidden');
+            }, 100);
+        }
+
+        // 偵測水果忍者劃動 (只在 Zone 內)
+        const zone = document.getElementById('slash-zone');
+        zone.addEventListener('touchstart', (e) => {
+            isSlashing = true;
+            startY = e.touches[0].clientY;
+        });
+
+        zone.addEventListener('touchmove', (e) => {
+            if(!isSlashing) return;
+            let currentY = e.touches[0].clientY;
+            if(Math.abs(currentY - startY) > 50) { // 劃動距離夠長
+                handlePackOpen();
+                isSlashing = false;
+            }
+        });
+
+        function handlePackOpen() {
+            // 此處執行切開特效代碼...
+            alert("你切開了卡包！");
+            // 隨機抽取邏輯：3% Rare, 97% Common
+            const isRare = Math.random() < 0.03;
+            const id = isRare ? 
+                Math.floor(Math.random() * 9 + 1).toString().padStart(3, '0') : 
+                Math.floor(Math.random() * 14 + 1).toString().padStart(3, '0');
+            
+            saveToLocal(isRare ? 'rare' : 'common', id);
+            document.getElementById('slash-zone').classList.add('hidden');
+        }
+
+        function saveToLocal(type, id) {
+            let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
+            if(!data[type].includes(id)) data[type].push(id);
+            localStorage.setItem('porkemon_' + currentUser, JSON.stringify(data));
+        }
+
+        function updateCollectionUI() {
+            const grid = document.getElementById('collection-grid');
+            const stats = document.getElementById('collection-stats');
+            let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
+            grid.innerHTML = "";
+            
+            // 渲染所有卡片
+            for(let i=1; i<=14; i++) {
+                const id = i.toString().padStart(3, '0');
+                const img = document.createElement('img');
+                img.src = GITHUB_BASE + "cards_common/" + id + ".png";
+                img.className = "card-thumb " + (data.common.includes(id) ? "owned" : "");
+                grid.appendChild(img);
+            }
+            stats.innerText = `${data.common.length + data.rare.length} / 23`;
+        }
+
     </script>
 </body>
 </html>
