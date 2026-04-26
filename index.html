@@ -11,93 +11,100 @@
         }
 
         body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
+            margin: 0;
+            padding: 0; width: 100%; height: 100%;
             background-color: #000; color: white;
             font-family: "Microsoft JhengHei", sans-serif;
             overflow: hidden; touch-action: none;
         }
 
         /* 畫布層 */
-        #bg-canvas, #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #bg-canvas, #particle-canvas { position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+        }
         #bg-canvas { z-index: 1; }
         #particle-canvas { z-index: 15; }
         
-        #ui-layer { position: relative; z-index: 10; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
+        #ui-layer { position: relative;
+            z-index: 10; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column;
+        }
 
-        .screen { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; }
-        .hidden { display: none !important; }
+        .screen { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            width: 100%; }
+        .hidden { display: none !important;
+        }
 
         /* --- 1. 登入頁 --- */
-        .select-wrapper { position: relative; margin-bottom: 50px; pointer-events: auto; }
-        #user-select {
-            appearance: none; -webkit-appearance: none; background: transparent; border: none; color: white;
-            font-size: 48px; font-weight: bold; padding-right: 40px; cursor: pointer; outline: none; text-align: center;
+        /* 修正 2: 讓 select-wrapper 使用 flex 佈局完美置中 */
+        .select-wrapper { 
+            position: relative;
+            margin-bottom: 50px; pointer-events: auto; 
+            display: flex; justify-content: center; align-items: center;
         }
-        .custom-arrow { position: absolute; right: 0; top: 60%; transform: translateY(-50%); font-size: 24px; color: #888; pointer-events: none; }
-        #btn-enter { background: transparent; border: 1.5px solid #fff; color: #fff; padding: 10px 40px; font-size: 18px; cursor: pointer; pointer-events: auto; }
+        #user-select {
+            appearance: none;
+            -webkit-appearance: none; background: transparent; border: none; color: white;
+            font-size: 48px; font-weight: bold; 
+            padding: 0 50px; /* 修正 2: 左右對稱 padding 以確保文字絕對置中 */
+            cursor: pointer; outline: none; text-align: center; text-align-last: center;
+        }
+        .custom-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 24px;
+            color: #888; pointer-events: none; }
+            
+        #btn-enter { background: transparent; border: 1.5px solid #fff;
+            color: #fff; padding: 10px 40px; font-size: 18px; cursor: pointer; pointer-events: auto;
+        }
 
         /* --- 2. 抽卡舞台 --- */
-        #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        #stage { position: relative;
+            width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;
+        }
 
          /* 卡包尺寸：75mm x 120mm (比例 5:8) */
         .pack-wrapper {
-            position: absolute; bottom: -100%;
+            position: absolute;
+            bottom: -100%;
             height: 70vh; aspect-ratio: 75 / 120;
+            width: calc(70vh * 75 / 120); /* 修正 1: 防止舊版 Safari aspect-ratio 失效導致寬度 0 隱形 */
+            left: 50%; margin-left: calc(-35vh * 75 / 120); /* 修正 1: 強制水平絕對置中，避免 JS 行內 transform 覆蓋 */
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
-        .pack-wrapper.active { bottom: 10%; pointer-events: auto; }
+        .pack-wrapper.active { bottom: 10%; pointer-events: auto;
+        }
         
         .pack-half {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
             background-size: 100% 100%; background-position: center; background-repeat: no-repeat;
             transition: transform 0.8s ease-in, opacity 0.8s ease-in;
         }
-        .split-left { clip-path: polygon(0 0, 100% 0, 0 100%); }
-        .split-right { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+        .split-left { clip-path: polygon(0 0, 100% 0, 0 100%);
+        }
+        .split-right { clip-path: polygon(100% 0, 100% 100%, 0 100%);
+        }
 
         /* 偵測區域 (上方 1/3) */
-        #slash-zone { position: absolute; top: 0; left: 10%; width: 80%; height: 35%; z-index: 200; pointer-events: auto; }
+        #slash-zone { position: absolute;
+            top: 0; left: 10%; width: 80%; height: 35%; z-index: 200; pointer-events: auto;
+        }
 
-/* 卡片尺寸：63mm x 88mm (標準比例) */
+        /* 3D 卡片翻轉 (已移除重複宣告) */
         .card-container {
-            position: absolute; height: 50vh; aspect-ratio: 63 / 88;
-            perspective: 1000px; display: none; z-index: 100; opacity: 0;
-            transition: opacity 1s, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translateY(50px) scale(0.9); pointer-events: auto; cursor: pointer;
-        }
-        .card-container.reveal { opacity: 1; transform: translateY(0) scale(1); }
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s; transform-style: preserve-3d; }
-        .card-front, .card-back {
-            position: absolute; width: 100%; height: 100%;
-            backface-visibility: hidden; border-radius: 12px;
-            background-size: 100% 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .card-back { transform: rotateY(0deg); }
-        .card-front { transform: rotateY(180deg); }
-        .is-flipped { transform: rotateY(180deg); }
-
-                .bottom-nav { 
-            position: absolute; 
-            bottom: 30px; 
-            display: flex; 
-            gap: 15px; 
-            pointer-events: auto;
-            z-index: 999; /* 確保按鈕層級高於所有特效與卡片 */
-        }
-
-        .draw-btn { background: #fff; color: #000; border: none; padding: 12px 25px; font-size: 16px; font-weight: bold; border-radius: 30px; cursor: pointer; }
-
-        /* 3D 卡片翻轉 */
-        .card-container {
-            position: absolute; height: 50vh; aspect-ratio: 63/88;
+            position: absolute;
+            height: 50vh; aspect-ratio: 63/88;
+            width: calc(50vh * 63 / 88); /* 修正 1: 防止寬度坍塌 */
             perspective: 1000px; display: none; z-index: 100; opacity: 0;
             transition: opacity 1s ease-out, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transform: translateY(100px) scale(0.8); pointer-events: auto; cursor: pointer;
         }
         .card-container.reveal { opacity: 1; transform: translateY(0) scale(1); }
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s; transform-style: preserve-3d; }
+        
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s;
+            transform-style: preserve-3d; }
+            
         .card-front, .card-back {
-            position: absolute; width: 100%; height: 100%;
+            position: absolute;
+            width: 100%; height: 100%;
             backface-visibility: hidden; border-radius: 12px;
             background-size: 100% 100%; background-position: center; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
         }
@@ -105,43 +112,62 @@
         .card-front { transform: rotateY(180deg); }
         .is-flipped { transform: rotateY(180deg); }
 
-                .bottom-nav { 
-            position: absolute; 
-            bottom: 30px; 
+        .bottom-nav { 
+            position: absolute;
+            bottom: calc(30px + env(safe-area-inset-bottom)); /* 修正 1: 避開手機底部安全區，防止點擊被系統攔截 */
             display: flex; 
             gap: 15px; 
             pointer-events: auto;
-            z-index: 999; /* 確保按鈕層級高於所有特效與卡片 */
+            z-index: 999;
         }
 
-        .draw-btn { background: #fff; color: #000; border: none; padding: 12px 25px; font-size: 16px; font-weight: bold; border-radius: 30px; cursor: pointer; }
-        .danger-btn { background: #ff4444; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;}
+        .draw-btn { background: #fff;
+            color: #000; border: none; padding: 12px 25px; font-size: 16px; font-weight: bold; border-radius: 30px; cursor: pointer;
+        }
+        .danger-btn { background: #ff4444; color: white; border: none; padding: 8px 15px;
+            border-radius: 5px; cursor: pointer; font-weight: bold;}
 
         /* --- 收藏頁面 --- */
-        #collection-screen { display: block; overflow-y: auto; height: 100vh; pointer-events: auto; padding-bottom: 60px; }
-        .col-header { position: sticky; top: 0; background: rgba(0,0,0,0.9); padding: 15px 20px; z-index: 300; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
-        .col-section { padding: 20px; }
-        .col-section h3 { border-bottom: 1px solid #444; padding-bottom: 10px; display: flex; justify-content: space-between; color: #aaa; }
-        .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .card-slot { width: 100%; aspect-ratio: 63 / 88; border-radius: 8px; overflow: hidden; background: #111; cursor: pointer; }
-        .card-slot img { width: 100%; height: 100%; object-fit: cover; }
-        .unowned img { filter: brightness(0.3) grayscale(1); }
+        #collection-screen { display: block;
+            overflow-y: auto; height: 100vh; pointer-events: auto; padding-bottom: 60px; }
+        .col-header { position: sticky;
+            top: 0; background: rgba(0,0,0,0.9); padding: 15px 20px; z-index: 300; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;
+        }
+        .col-section { padding: 20px;
+        }
+        .col-section h3 { border-bottom: 1px solid #444; padding-bottom: 10px; display: flex;
+            justify-content: space-between; color: #aaa; }
+        .card-grid { display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 12px; }
+        .card-slot { width: 100%; aspect-ratio: 63 / 88; border-radius: 8px;
+            overflow: hidden; background: #111; cursor: pointer; }
+        .card-slot img { width: 100%;
+            height: 100%; object-fit: cover; }
+        .unowned img { filter: brightness(0.3) grayscale(1);
+        }
 
         /* --- 大圖欣賞 Modal --- */
         #preview-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); z-index: 1000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             opacity: 0; pointer-events: none; transition: opacity 0.4s;
         }
-        #preview-modal.active { opacity: 1; pointer-events: auto; }
-        #preview-card { height: 70vh; aspect-ratio: 63 / 88; border-radius: 15px; background-size: 100% 100%; margin-bottom: 30px; box-shadow: 0 0 50px rgba(255,255,255,0.2); }
-        .pill-group { display: flex; gap: 20px; }
+        #preview-modal.active { opacity: 1;
+            pointer-events: auto; }
+        #preview-card { height: 70vh; aspect-ratio: 63 / 88; border-radius: 15px;
+            background-size: 100% 100%; margin-bottom: 30px; box-shadow: 0 0 50px rgba(255,255,255,0.2);
+        }
+        .pill-group { display: flex; gap: 20px;
+        }
         .pill-btn {
-            border: 1.5px solid #fff; background: transparent; color: #fff;
+            border: 1.5px solid #fff;
+            background: transparent; color: #fff;
             padding: 12px 40px; border-radius: 50px; font-size: 18px; cursor: pointer; transition: 0.3s;
         }
-        .pill-btn:active { background: #fff; color: #000; }
+        .pill-btn:active { background: #fff; color: #000;
+        }
         
     </style>
 </head>
@@ -251,7 +277,8 @@
         bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
         const grad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/3, 50, bgCanvas.width/2, bgCanvas.height/3, bgCanvas.width*0.8);
         grad.addColorStop(0, '#151515'); grad.addColorStop(1, '#000');
-        bgCtx.fillStyle = grad; bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
+        bgCtx.fillStyle = grad;
+        bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
 
         // 向上漂浮的光點
         bgCtx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -275,9 +302,10 @@
 
         // 粒子與切割線層
         pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-        
+
         if(isSlashing && slashPath.length > 1) {
-            pCtx.shadowBlur = 15; pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
+            pCtx.shadowBlur = 15;
+            pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
             pCtx.lineWidth = 5; pCtx.lineCap = "round";
             pCtx.beginPath(); pCtx.moveTo(slashPath[0].x, slashPath[0].y);
             slashPath.forEach(p => pCtx.lineTo(p.x, p.y)); pCtx.stroke();
@@ -289,7 +317,8 @@
             p.x += p.vx; p.y += p.vy; p.life -= 0.025;
             if(p.life <= 0) { blastParticles.splice(i, 1); continue; }
             pCtx.fillStyle = p.color; pCtx.globalAlpha = p.life;
-            pCtx.beginPath(); pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
+            pCtx.beginPath();
+            pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
         }
         pCtx.globalAlpha = 1;
 
@@ -304,7 +333,7 @@
         if(id === 'collection-screen') updateCollectionUI();
     }
 
-        document.getElementById('btn-enter').onclick = () => {
+    document.getElementById('btn-enter').onclick = () => {
         currentUser = document.getElementById('user-select').value;
         document.getElementById('user-title').innerText = currentUser + " 的圖鑑";
         gameState = 'drawing';
@@ -314,10 +343,11 @@
         document.getElementById('slash-zone').classList.add('hidden');
     };
 
-        function prepareDraw(num) {
-        console.log("正在準備抽卡:", num); // 加入偵錯 Log
+    function prepareDraw(num) {
+        console.log("正在準備抽卡:", num);
+        // 加入偵錯 Log
         const stage = document.getElementById('stage');
-        
+
         // 清理舊卡片
         Array.from(stage.children).forEach(child => { 
             if(child.id !== 'slash-zone') child.remove(); 
@@ -334,7 +364,6 @@
             let offsetX = num > 1 ? (Math.random()-0.5)*15 : 0;
             let offsetY = num > 1 ? (Math.random()-0.5)*15 : 0;
             wrap.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(${(Math.random()-0.5)*3}deg)`;
-            
             wrap.innerHTML = `
                 <div class="pack-half split-left" style="background-image:url('${IMG_PACK}')"></div>
                 <div class="pack-half split-right" style="background-image:url('${IMG_PACK}')"></div>
@@ -355,7 +384,8 @@
 
     // --- 切開與互動 ---
     const uiLayer = document.getElementById('ui-layer');
-        uiLayer.addEventListener('touchstart', (e) => {
+
+    uiLayer.addEventListener('touchstart', (e) => {
         // 新增：如果觸碰的是按鈕，直接返回，不執行切牌（Slashing）邏輯
         if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
         
@@ -380,6 +410,7 @@
     function executeCut() {
         document.getElementById('slash-zone').classList.add('hidden');
         const packs = document.querySelectorAll('.pack-wrapper');
+
         let hasRare = drawnCards.some(c => c.type === 'rare');
 
         triggerBlast(hasRare ? '#ffd700' : '#ffffff');
@@ -409,11 +440,19 @@
         const stage = document.getElementById('stage');
         const container = document.createElement('div');
         container.className = 'card-container';
-        
+
+        // 修正 1: 讓單抽與十連抽的卡片都能正確被定位
         if(drawnCards.length > 1) {
-            container.style.height = '20vh'; 
+            container.style.height = '20vh';
+            container.style.width = 'calc(20vh * 63 / 88)';
             const row = Math.floor(idx / 5); const col = idx % 5;
-            container.style.left = `${10 + col * 16}%`; container.style.top = `${25 + row * 25}%`;
+            container.style.left = `${10 + col * 16}%`;
+            container.style.top = `${25 + row * 25}%`;
+            container.style.marginLeft = '0'; // 確保不受 CSS 水平置中影響
+        } else {
+            container.style.left = '50%';
+            container.style.top = '25%';
+            container.style.marginLeft = 'calc(-25vh * 63 / 88)'; // 單抽強制絕對置中
         }
 
         const glow = result.type === 'rare' ? 'var(--gold-glow)' : 'var(--white-glow)';
@@ -425,6 +464,7 @@
                 <div class="card-front" style="background-image:url('${frontImgSrc}')"></div>
             </div>
         `;
+
         stage.appendChild(container);
         container.style.display = 'block';
         setTimeout(() => { container.classList.add('reveal'); }, 50 * idx);
@@ -444,7 +484,7 @@
         const gridCommon = document.getElementById('grid-common');
         const gridRare = document.getElementById('grid-rare');
         let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
-        
+
         // 更新進度文字
         document.getElementById('progress-common').innerText = `${data.common.length} / ${COMMON_MAX}`;
         document.getElementById('progress-rare').innerText = `${data.rare.length} / ${RARE_MAX}`;
@@ -456,6 +496,7 @@
             const isOwned = data.common.includes(id);
             const imgSrc = isOwned ? `${BASE_URL}cards_common/${id}.PNG` : IMG_BACK;
             const slot = document.createElement('div');
+            
             slot.className = `card-slot ${isOwned ? 'owned' : 'unowned'}`;
             slot.innerHTML = `<img src="${imgSrc}">`;
             gridCommon.appendChild(slot);
@@ -468,6 +509,7 @@
             const isOwned = data.rare.includes(id);
             const imgSrc = isOwned ? `${BASE_URL}cards_rare/${id}.PNG` : IMG_BACK;
             const slot = document.createElement('div');
+            
             slot.className = `card-slot rare ${isOwned ? 'owned' : 'unowned'}`;
             slot.innerHTML = `<img src="${imgSrc}">`;
             gridRare.appendChild(slot);
