@@ -1,1 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>抽肥豬卡 - Porkémon</title>
+    <style>
+        /* 呢度會放 CSS，用嚟整黑色 Spotlight 背景同埋飛飛下嘅卡背 */
+        body, html { margin: 0; padding: 0; background: #000; color: white; overflow: hidden; font-family: sans-serif; }
+        .hidden { display: none !important; }
+        
+        /* 核心 Canvas，用嚟畫切卡光芒同動態背景 */
+        #game-canvas { position: fixed; top: 0; left: 0; z-index: 1; }
+        #ui-layer { position: relative; z-index: 10; height: 100vh; pointer-events: none; }
+        button, select { pointer-events: auto; }
+    </style>
+</head>
+<body>
 
+    <canvas id="game-canvas"></canvas>
+
+    <div id="ui-layer">
+        
+        <section id="login-screen" class="screen">
+            <div class="center-content">
+                <h1>選擇你的身份</h1>
+                <select id="user-select">
+                    <option value="Suki">Suki</option>
+                    <option value="Nelson">Nelson</option>
+                    <option value="爸爸">爸爸</option>
+                    <option value="媽媽">媽媽</option>
+                    <option value="細佬">細佬</option>
+                    <option value="Rainbow">Rainbow</option>
+                </select>
+                <button id="btn-enter">進入卡池</button>
+            </div>
+        </section>
+
+        <section id="main-screen" class="screen hidden">
+            <div class="top-nav">
+                <span id="display-name"></span>
+                <button id="btn-collection">我的收藏</button>
+            </div>
+
+            <div id="pack-container">
+                <div id="slash-zone"></div> </div>
+
+            <div class="bottom-controls">
+                <button id="btn-draw-1">單抽</button>
+                <button id="btn-draw-10">十連抽</button>
+            </div>
+        </section>
+
+        <section id="collection-screen" class="screen hidden">
+            <div class="top-nav">
+                <button id="btn-back-main">返回抽卡</button>
+                <h2>我的圖鑑</h2>
+            </div>
+            
+            <div class="stats-bar">
+                <p>普通卡 (Common): <span id="common-count">0</span> / 14</p>
+                <p>稀有卡 (Rare): <span id="rare-count">0</span> / 9</p>
+            </div>
+
+            <div id="collection-grid">
+                </div>
+        </section>
+
+    </div>
+
+    <script>
+        // 定義圖片路徑基礎 (GitHub Raw 路徑)
+        const GITHUB_BASE = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porke.../main/";
+        const PATHS = {
+            back: GITHUB_BASE + "back/",
+            packs: GITHUB_BASE + "packs/",
+            common: GITHUB_BASE + "cards_common/",
+            rare: GITHUB_BASE + "cards_rare/"
+        };
+
+        // 卡池編號配置
+        const CARD_CONFIG = {
+            common_total: 14, // 001-014
+            rare_total: 9    // 001-009
+        };
+    </script>
+</body>
+</html>
