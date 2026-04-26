@@ -141,9 +141,14 @@
             pointer-events: auto;
         }
 
-        #save-hint {
-            color: #fff; margin-top: 15px; font-size: 16px; font-weight: bold;
-            opacity: 0; transition: opacity 0.3s ease; height: 20px;
+                #save-hint {
+            color: #fff; 
+            margin-top: 5px; /* 縮小與上方提示字的間距 */
+            font-size: 16px; 
+            font-weight: bold;
+            opacity: 0; 
+            transition: opacity 0.3s ease; 
+            height: 20px;
         }
 
         .overlay-controls { margin-top: 20px; display: flex; gap: 20px; pointer-events: auto; }
@@ -195,6 +200,7 @@
 
 <div id="fullscreen-overlay" class="hidden">
     <img id="fullscreen-card-img" src="" alt="放大卡片">
+        <div style="color: #aaa; font-size: 14px; margin-top: 12px;">長按圖片可進行儲存</div>
     <div id="save-hint"></div>
     <div class="overlay-controls">
         <button class="pill-btn" onclick="downloadImage()">儲存</button>
