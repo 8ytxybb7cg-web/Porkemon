@@ -105,7 +105,15 @@
         .card-front { transform: rotateY(180deg); }
         .is-flipped { transform: rotateY(180deg); }
 
-        .bottom-nav { position: absolute; bottom: 30px; display: flex; gap: 15px; pointer-events: auto; z-index: 250;}
+                .bottom-nav { 
+            position: absolute; 
+            bottom: 30px; 
+            display: flex; 
+            gap: 15px; 
+            pointer-events: auto;
+            z-index: 999; /* 確保按鈕層級高於所有特效與卡片 */
+        }
+
         .draw-btn { background: #fff; color: #000; border: none; padding: 12px 25px; font-size: 16px; font-weight: bold; border-radius: 30px; cursor: pointer; }
         .danger-btn { background: #ff4444; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;}
 
