@@ -81,17 +81,35 @@
         .card-front { transform: rotateY(180deg); }
         .is-flipped { transform: rotateY(180deg); }
 
-        /* 底部導航 */
+        /* 底部導航 & 共用 Pill 形按鈕 */
         .bottom-nav { position: absolute; bottom: 40px; display: flex; gap: 20px; pointer-events: auto; z-index: 250; }
         .draw-btn { background: #fff; color: #000; border: none; padding: 12px 30px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; }
+        
+        .pill-btn {
+            background: transparent; color: #fff;
+            border: 2px solid #fff; border-radius: 50px;
+            padding: 10px 30px; font-size: 18px; font-weight: bold;
+            cursor: pointer; pointer-events: auto;
+        }
 
         /* 收藏頁面 */
-        #collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; width: 90%; overflow-y: auto; pointer-events: auto; }
+        #collection-screen { justify-content: flex-start; padding-top: 30px; }
+        .collection-header { padding: 10px 20px; text-align: center; width: 100%; flex-shrink: 0; pointer-events: auto; }
+        .collection-controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
+        
+        #collection-content { 
+            width: 100%; max-width: 600px; 
+            overflow-y: auto; pointer-events: auto; 
+            padding-bottom: 50px;
+        }
+        
+        .collection-group-title { text-align: center; font-size: 22px; font-weight: bold; margin: 20px 0 15px; color: #fff; }
+        .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
+        
         .card-slot { width: 100%; aspect-ratio: 63/88; background: #222; border-radius: 5px; overflow: hidden; }
-        .card-slot img { width: 100%; height: 100%; object-fit: cover; opacity: 0.2; }
-        .card-slot.owned img { opacity: 1; }
+        .card-slot img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* 全螢幕放大預覽 (新增) */
+        /* 全螢幕放大預覽 */
         #fullscreen-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(0, 0, 0, 0.85); z-index: 9999;
@@ -114,12 +132,6 @@
         }
 
         .overlay-controls { margin-top: 20px; display: flex; gap: 20px; pointer-events: auto; }
-        .pill-btn {
-            background: transparent; color: #fff;
-            border: 2px solid #fff; border-radius: 50px;
-            padding: 10px 40px; font-size: 18px; font-weight: bold;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -155,11 +167,14 @@
     </section>
 
     <section id="collection-screen" class="screen hidden">
-        <div style="padding: 20px; pointer-events: auto; text-align: center; width: 100%;">
-            <button class="draw-btn" onclick="showScreen('main-screen')" style="margin-bottom:10px;">返回</button>
-            <h2 id="user-title"></h2>
+        <div class="collection-header">
+            <div class="collection-controls">
+                <button class="pill-btn" onclick="showScreen('main-screen')">返回</button>
+                <button class="pill-btn" onclick="resetCollection()">重置</button>
+            </div>
+            <h2 id="user-title" style="margin: 10px 0 0 0;"></h2>
         </div>
-        <div id="collection-grid"></div>
+        <div id="collection-content"></div>
     </section>
 </div>
 
@@ -395,7 +410,7 @@
         setTimeout(() => { container.classList.add('reveal'); }, 50 * idx);
     }
 
-    // 新增：翻牌及放大邏輯
+    // --- 翻牌及放大邏輯 ---
     function flipCard(el, type, id) {
         // 如果已經翻轉過，再次點擊則觸發放大欣賞
         if(el.classList.contains('is-flipped')) {
@@ -442,43 +457,74 @@
         setTimeout(() => hint.style.opacity = '0', 3000);
     }
 
-    // --- 收藏圖鑑 ---
+    // --- 收藏圖鑑與重置 ---
+    function resetCollection() {
+        if(confirm(`確定要重置 ${currentUser} 的收藏嗎？此操作無法還原。`)) {
+            localStorage.setItem('porkemon_' + currentUser, '{"common":[], "rare":[]}');
+            updateCollectionUI(); // 重新渲染畫面
+        }
+    }
+
     function updateCollectionUI() {
-        const grid = document.getElementById('collection-grid');
+        const content = document.getElementById('collection-content');
         let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
-        grid.innerHTML = "";
+        content.innerHTML = "";
         
-        // 顯示 Common (14張)
+        // --- 顯示 普通卡 (Common) 分組 ---
+        const commonTitle = document.createElement('div');
+        commonTitle.className = 'collection-group-title';
+        commonTitle.innerText = "普通卡";
+        content.appendChild(commonTitle);
+
+        const commonGrid = document.createElement('div');
+        commonGrid.className = 'collection-grid';
+        
         for(let i=1; i<=14; i++) {
             const id = i.toString().padStart(3, '0');
             const isOwned = data.common.includes(id);
             const slot = document.createElement('div');
-            slot.className = `card-slot ${isOwned ? 'owned' : ''}`;
-            slot.innerHTML = `<img src="${BASE_URL}cards_common/${id}.PNG" alt="Common ${id}">`;
+            slot.className = 'card-slot';
             
-            // 已擁有的卡片可以點擊放大
+            // 未擁有時顯示背面圖，擁有則顯示正面圖
+            const imgSrc = isOwned ? `${BASE_URL}cards_common/${id}.PNG` : IMG_BACK;
+            slot.innerHTML = `<img src="${imgSrc}" alt="Common ${id}">`;
+            
+            // 只有已擁有的卡片可以點擊放大
             if(isOwned) {
                 slot.onclick = () => openFullscreen('common', id);
                 slot.style.cursor = 'pointer';
             }
-            grid.appendChild(slot);
+            commonGrid.appendChild(slot);
         }
+        content.appendChild(commonGrid);
         
-        // 顯示 Rare (9張)
+        // --- 顯示 稀有卡 (Rare) 分組 ---
+        const rareTitle = document.createElement('div');
+        rareTitle.className = 'collection-group-title';
+        rareTitle.innerText = "稀有卡";
+        content.appendChild(rareTitle);
+
+        const rareGrid = document.createElement('div');
+        rareGrid.className = 'collection-grid';
+
         for(let i=1; i<=9; i++) {
             const id = i.toString().padStart(3, '0');
             const isOwned = data.rare.includes(id);
             const slot = document.createElement('div');
-            slot.className = `card-slot ${isOwned ? 'owned' : ''}`;
-            slot.innerHTML = `<img src="${BASE_URL}cards_rare/${id}.PNG" alt="Rare ${id}">`;
+            slot.className = 'card-slot';
             
-            // 已擁有的卡片可以點擊放大
+            // 未擁有時顯示背面圖，擁有則顯示正面圖
+            const imgSrc = isOwned ? `${BASE_URL}cards_rare/${id}.PNG` : IMG_BACK;
+            slot.innerHTML = `<img src="${imgSrc}" alt="Rare ${id}">`;
+            
+            // 只有已擁有的卡片可以點擊放大
             if(isOwned) {
                 slot.onclick = () => openFullscreen('rare', id);
                 slot.style.cursor = 'pointer';
             }
-            grid.appendChild(slot);
+            rareGrid.appendChild(slot);
         }
+        content.appendChild(rareGrid);
     }
 </script>
 </body>
