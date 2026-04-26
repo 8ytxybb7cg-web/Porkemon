@@ -2,7 +2,6 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>抽肥豬卡 - Porkémon</title>
     <style>
@@ -28,8 +27,7 @@
         #ui-layer { position: relative; z-index: 10; width: 100%; height: 100%; display: flex; flex-direction: column; pointer-events: none; }
 
         .screen { 
-            flex: 1; 
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; 
             width: 100%; height: 100%;
             min-height: 0; /* 修復 Safari Flexbox 子元素溢出問題，確保高度限制生效 */
         }
@@ -103,8 +101,7 @@
 
         /* 收藏頁面 */
         #collection-screen { 
-            justify-content: flex-start; 
-            padding-top: 30px; 
+            justify-content: flex-start; padding-top: 30px; 
             overflow: hidden; /* 確保整體容器不會被子元素撐破 */
             box-sizing: border-box;
         }
@@ -113,8 +110,7 @@
         
         #collection-content { 
             flex: 1; /* 佔滿剩餘空間 */
-            width: 100%;
-            max-width: 600px; 
+            width: 100%; max-width: 600px; 
             overflow-y: auto; /* 內部滾動 */
             pointer-events: auto; 
             padding-bottom: 50px;
@@ -139,7 +135,9 @@
         #fullscreen-card-img {
             height: 65vh; max-height: 800px; aspect-ratio: 63/88;
             border-radius: 15px; object-fit: cover;
-            -webkit-user-select: none; user-select: none; /* 讓長按可觸發手機系統的下載圖片選單 */
+            /* 修正：允許選取及長按觸發系統選單 */
+            -webkit-user-select: auto; user-select: auto;
+            -webkit-touch-callout: default; 
             pointer-events: auto;
         }
 
@@ -197,9 +195,9 @@
 
 <div id="fullscreen-overlay" class="hidden">
     <img id="fullscreen-card-img" src="" alt="放大卡片">
-    <div id="save-hint">請長按上方圖片進行儲存</div>
+    <div id="save-hint"></div>
     <div class="overlay-controls">
-        <button class="pill-btn" onclick="showSaveHint()">儲存</button>
+        <button class="pill-btn" onclick="downloadImage()">儲存</button>
         <button class="pill-btn" onclick="closeFullscreen()">返回</button>
     </div>
 </div>
@@ -209,7 +207,6 @@
     const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
     const IMG_PACK = BASE_URL + "packs/pack.png";
     const IMG_BACK = BASE_URL + "back/back.png";
-    
     // 【日後維護請改這裡】卡牌分類總數量，更新時請人手更改這兩個數值即可
     const TOTAL_COMMON = 14;
     const TOTAL_RARE = 9;
@@ -331,7 +328,6 @@
         Array.from(stage.children).forEach(child => {
             if(child.id !== 'slash-zone') child.remove();
         });
-
         drawnCards = [];
         const zone = document.getElementById('slash-zone');
         zone.classList.add('hidden');
@@ -366,12 +362,10 @@
 
     // --- 水果忍者切開偵測 ---
     const uiLayer = document.getElementById('ui-layer');
-
     uiLayer.addEventListener('touchstart', (e) => {
         if(document.getElementById('slash-zone').classList.contains('hidden')) return;
         isSlashing = true; slashPath = [{x: e.touches[0].clientX, y: e.touches[0].clientY}];
     });
-
     uiLayer.addEventListener('touchmove', (e) => {
         if(!isSlashing) return;
         const x = e.touches[0].clientX; const y = e.touches[0].clientY;
@@ -383,7 +377,6 @@
             isSlashing = false;
         }
     });
-
     uiLayer.addEventListener('touchend', () => { isSlashing = false; slashPath = []; });
 
     // --- 物理切開與粒子爆發 ---
@@ -392,7 +385,6 @@
         const packs = document.querySelectorAll('.pack-wrapper');
         let hasRare = drawnCards.some(c => c.type === 'rare');
         triggerBlast(hasRare ? '#ffd700' : '#ffffff');
-
         packs.forEach((p, idx) => {
             const left = p.querySelector('.split-left');
             const right = p.querySelector('.split-right');
@@ -419,7 +411,6 @@
         const stage = document.getElementById('stage');
         const container = document.createElement('div');
         container.className = 'card-container';
-
         if(drawnCards.length > 1) {
             container.style.width = '25vw';
             container.style.maxWidth = '150px';
@@ -437,7 +428,6 @@
                 <div class="card-front" style="background-image:url('${frontImgSrc}')"></div>
             </div>
         `;
-
         stage.appendChild(container);
         
         container.style.display = 'block';
@@ -484,11 +474,49 @@
         }, 300);
     }
 
-    function showSaveHint() {
+    // --- 實作直接下載圖片邏輯 ---
+    async function downloadImage() {
+        const img = document.getElementById('fullscreen-card-img');
+        const imgSrc = img.src;
         const hint = document.getElementById('save-hint');
-        hint.style.opacity = '1';
-        // 3秒後自動隱藏提示
-        setTimeout(() => hint.style.opacity = '0', 3000);
+        
+        try {
+            // 顯示下載中狀態
+            hint.innerText = "下載中...";
+            hint.style.opacity = '1';
+
+            // 讀取圖片並轉換成 Blob
+            const response = await fetch(imgSrc);
+            const blob = await response.blob();
+            
+            // 建立暫時的 URL 供下載使用
+            const url = window.URL.createObjectURL(blob);
+            
+            // 建立虛擬的 a 標籤並觸發點擊下載
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            
+            // 嘗試從網址中擷取原檔名，若無則給定預設名稱
+            const filename = imgSrc.split('/').pop() || 'porkemon_card.png';
+            a.download = 'Porkemon_' + filename;
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // 清理暫存資源
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            // 更新提示為下載完成
+            hint.innerText = "下載完成！";
+            setTimeout(() => hint.style.opacity = '0', 2000);
+            
+        } catch (error) {
+            console.error('下載圖片失敗:', error);
+            hint.innerText = "下載失敗，請長按圖片儲存";
+            setTimeout(() => hint.style.opacity = '0', 3000);
+        }
     }
 
     // --- 收藏圖鑑與重置 ---
@@ -503,14 +531,14 @@
         const content = document.getElementById('collection-content');
         let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
         content.innerHTML = "";
-
+        
         // --- 顯示 普通卡 (Common) 分組 ---
         const commonTitle = document.createElement('div');
         commonTitle.className = 'collection-group-title';
         // 加入計數器：目前擁有數量 / 總數量
         commonTitle.innerText = `普通卡 (${data.common.length}/${TOTAL_COMMON})`;
         content.appendChild(commonTitle);
-
+        
         const commonGrid = document.createElement('div');
         commonGrid.className = 'collection-grid';
         
@@ -520,7 +548,7 @@
             const isOwned = data.common.includes(id);
             const slot = document.createElement('div');
             slot.className = 'card-slot';
-
+            
             // 未擁有時顯示背面圖，擁有則顯示正面圖
             const imgSrc = isOwned ? `${BASE_URL}cards_common/${id}.PNG` : IMG_BACK;
             slot.innerHTML = `<img src="${imgSrc}" alt="Common ${id}">`;
@@ -540,7 +568,7 @@
         // 加入計數器：目前擁有數量 / 總數量
         rareTitle.innerText = `稀有卡 (${data.rare.length}/${TOTAL_RARE})`;
         content.appendChild(rareTitle);
-
+        
         const rareGrid = document.createElement('div');
         rareGrid.className = 'collection-grid';
         
@@ -550,7 +578,7 @@
             const isOwned = data.rare.includes(id);
             const slot = document.createElement('div');
             slot.className = 'card-slot';
-
+            
             // 未擁有時顯示背面圖，擁有則顯示正面圖
             const imgSrc = isOwned ? `${BASE_URL}cards_rare/${id}.PNG` : IMG_BACK;
             slot.innerHTML = `<img src="${imgSrc}" alt="Rare ${id}">`;
