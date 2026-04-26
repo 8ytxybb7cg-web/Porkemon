@@ -76,7 +76,15 @@
         .card-front { transform: rotateY(180deg); }
         .is-flipped { transform: rotateY(180deg); }
 
-        .bottom-nav { position: absolute; bottom: 30px; display: flex; gap: 15px; pointer-events: auto; z-index: 250; }
+                .bottom-nav { 
+            position: absolute; 
+            bottom: 30px; 
+            display: flex; 
+            gap: 15px; 
+            pointer-events: auto;
+            z-index: 999; /* 確保按鈕層級高於所有特效與卡片 */
+        }
+
         .draw-btn { background: #fff; color: #000; border: none; padding: 12px 25px; font-size: 16px; font-weight: bold; border-radius: 30px; cursor: pointer; }
 
         /* 3D 卡片翻轉 */
@@ -288,17 +296,25 @@
         if(id === 'collection-screen') updateCollectionUI();
     }
 
-    document.getElementById('btn-enter').onclick = () => {
+        document.getElementById('btn-enter').onclick = () => {
         currentUser = document.getElementById('user-select').value;
         document.getElementById('user-title').innerText = currentUser + " 的圖鑑";
         gameState = 'drawing';
         showScreen('main-screen');
+        
+        // 確保進入時，切割區域是隱藏的，直到點擊抽卡按鈕
+        document.getElementById('slash-zone').classList.add('hidden');
     };
 
-    function prepareDraw(num) {
+        function prepareDraw(num) {
+        console.log("正在準備抽卡:", num); // 加入偵錯 Log
         const stage = document.getElementById('stage');
-        Array.from(stage.children).forEach(child => { if(child.id !== 'slash-zone') child.remove(); });
         
+        // 清理舊卡片
+        Array.from(stage.children).forEach(child => { 
+            if(child.id !== 'slash-zone') child.remove(); 
+        });
+
         drawnCards = [];
         const zone = document.getElementById('slash-zone');
         zone.classList.add('hidden');
@@ -331,9 +347,13 @@
 
     // --- 切開與互動 ---
     const uiLayer = document.getElementById('ui-layer');
-    uiLayer.addEventListener('touchstart', (e) => {
+        uiLayer.addEventListener('touchstart', (e) => {
+        // 新增：如果觸碰的是按鈕，直接返回，不執行切牌（Slashing）邏輯
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+        
         if(document.getElementById('slash-zone').classList.contains('hidden') || gameState !== 'drawing') return;
-        isSlashing = true; slashPath = [{x: e.touches[0].clientX, y: e.touches[0].clientY}];
+        isSlashing = true; 
+        slashPath = [{x: e.touches[0].clientX, y: e.touches[0].clientY}];
     });
 
     uiLayer.addEventListener('touchmove', (e) => {
