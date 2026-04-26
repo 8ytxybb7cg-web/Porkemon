@@ -18,13 +18,21 @@
         }
 
         /* 畫布層 */
-        #bg-canvas, #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #bg-canvas, #particle-canvas { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; 
+        }
         #bg-canvas { z-index: 1; }
         #particle-canvas { z-index: 15; }
         
-        #ui-layer { position: relative; z-index: 10; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; }
+        #ui-layer { 
+            position: relative; z-index: 10; width: 100%; height: 100%; 
+            pointer-events: none; display: flex; flex-direction: column; 
+        }
 
-        .screen { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; }
+        .screen { 
+            flex: 1; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; width: 100%; 
+        }
         .hidden { display: none !important; }
 
         /* --- 1. 登入頁 --- */
@@ -33,16 +41,25 @@
             appearance: none; -webkit-appearance: none; background: transparent; border: none; color: white;
             font-size: 48px; font-weight: bold; padding-right: 40px; cursor: pointer; outline: none; text-align: center;
         }
-        .custom-arrow { position: absolute; right: 0; top: 60%; transform: translateY(-50%); font-size: 24px; color: #888; pointer-events: none; }
-        #btn-enter { background: transparent; border: 1.5px solid #fff; color: #fff; padding: 10px 40px; font-size: 18px; cursor: pointer; pointer-events: auto; }
+        .custom-arrow { 
+            position: absolute; right: 0; top: 60%; transform: translateY(-50%); 
+            font-size: 24px; color: #888; pointer-events: none; 
+        }
+        #btn-enter { 
+            background: transparent; border: 1.5px solid #fff; color: #fff; 
+            padding: 10px 40px; font-size: 18px; cursor: pointer; pointer-events: auto; 
+        }
 
         /* --- 2. 抽卡舞台 --- */
-        #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        #stage { 
+            position: relative; width: 100%; height: 100%; 
+            display: flex; justify-content: center; align-items: center; 
+        }
 
-        /* 卡包容器：佔滿畫面約 70% 高度 */
+        /* 卡包容器：高度佔螢幕 70%，尺寸比例 75x120 */
         .pack-wrapper {
             position: absolute; bottom: -100%;
-            height: 70vh; aspect-ratio: 2/3; max-width: 95vw;
+            height: 70vh; aspect-ratio: 75/120; max-width: 95vw;
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
         .pack-wrapper.active { bottom: 10%; pointer-events: auto; }
@@ -56,9 +73,12 @@
         .split-right { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
 
         /* 偵測區域 (上方 1/3) */
-        #slash-zone { position: absolute; top: 0; left: 10%; width: 80%; height: 35%; z-index: 200; pointer-events: auto; }
+        #slash-zone { 
+            position: absolute; top: 0; left: 10%; width: 80%; height: 35%; 
+            z-index: 200; pointer-events: auto; 
+        }
 
-        /* 3D 卡片翻轉 */
+        /* 3D 卡片翻轉 (維持 63x88 比例) */
         .card-container {
             position: absolute; height: 50vh; aspect-ratio: 63/88;
             perspective: 1000px; display: none; z-index: 100; opacity: 0;
@@ -82,13 +102,20 @@
 
         /* --- 3. 收藏頁 (可滾動) --- */
         #collection-screen { display: block; overflow-y: auto; height: 100vh; pointer-events: auto; padding-bottom: 50px; }
-        .collection-header { position: sticky; top: 0; background: rgba(0,0,0,0.9); padding: 15px 20px; z-index: 10; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+        .collection-header { 
+            position: sticky; top: 0; background: rgba(0,0,0,0.9); padding: 15px 20px; 
+            z-index: 10; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #333; 
+        }
         .collection-header h2 { margin: 0; font-size: 20px; }
         .collection-section { padding: 20px; }
         .collection-section h3 { margin-top: 0; color: #ccc; border-bottom: 1px solid #444; padding-bottom: 5px; display: flex; justify-content: space-between;}
         
         .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .card-slot { width: 100%; aspect-ratio: 63/88; border-radius: 8px; overflow: hidden; background: #111; box-shadow: 0 2px 5px rgba(0,0,0,0.5); position: relative;}
+        .card-slot { 
+            width: 100%; aspect-ratio: 63/88; border-radius: 8px; overflow: hidden; 
+            background: #111; box-shadow: 0 2px 5px rgba(0,0,0,0.5); position: relative;
+        }
         .card-slot img { width: 100%; height: 100%; object-fit: cover; display: block; transition: 0.3s; }
         
         /* 未擁有的狀態 (暗化) */
@@ -97,6 +124,26 @@
         .card-slot.owned img { filter: none; }
         .card-slot.owned.rare { box-shadow: 0 0 10px #ffd700; }
         
+        /* --- 4. 全螢幕放大層 --- */
+        #fullscreen-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        #fullscreen-img {
+            max-width: 95vw; max-height: 75vh;
+            aspect-ratio: 63/88; object-fit: contain;
+        }
+        .pill-btn-group {
+            margin-top: 30px; display: flex; gap: 20px;
+        }
+        .pill-btn {
+            background: transparent; color: white;
+            border: 2px solid white; border-radius: 50px;
+            padding: 10px 40px; font-size: 18px; font-weight: bold;
+            cursor: pointer;
+        }
+
     </style>
 </head>
 <body>
@@ -152,11 +199,21 @@
     </section>
 </div>
 
+<div id="fullscreen-layer" class="hidden">
+    <img id="fullscreen-img" src="" alt="放大卡片">
+    <div class="pill-btn-group">
+        <button class="pill-btn" id="btn-save">儲存</button>
+        <button class="pill-btn" id="btn-close">返回</button>
+    </div>
+</div>
+
 <script>
     // --- 參數設定 ---
     const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
-    const IMG_PACK = BASE_URL + "packs/IMG_8749.jpeg";
-    const IMG_BACK = BASE_URL + "back/super_resolution_20260414230213306.jpeg";
+    
+    // 已依照需求更改為相對路徑的 pack.png 與 back.png
+    const IMG_PACK = "pack.png";
+    const IMG_BACK = "back.png";
     
     // 手動更新此處的卡片總數
     const COMMON_MAX = 14; 
@@ -166,6 +223,10 @@
     let drawnCards = [];
     let isSlashing = false;
     let gameState = "login"; 
+    
+    // 放大功能的當前狀態變數
+    let currentZoomUrl = "";
+    let currentZoomFilename = "";
 
     // --- Canvas 背景系統 ---
     const bgCanvas = document.getElementById('bg-canvas');
@@ -205,7 +266,8 @@
         bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
         const grad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/3, 50, bgCanvas.width/2, bgCanvas.height/3, bgCanvas.width*0.8);
         grad.addColorStop(0, '#151515'); grad.addColorStop(1, '#000');
-        bgCtx.fillStyle = grad; bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
+        bgCtx.fillStyle = grad;
+        bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
 
         // 向上漂浮的光點
         bgCtx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -229,9 +291,9 @@
 
         // 粒子與切割線層
         pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-        
         if(isSlashing && slashPath.length > 1) {
-            pCtx.shadowBlur = 15; pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
+            pCtx.shadowBlur = 15;
+            pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
             pCtx.lineWidth = 5; pCtx.lineCap = "round";
             pCtx.beginPath(); pCtx.moveTo(slashPath[0].x, slashPath[0].y);
             slashPath.forEach(p => pCtx.lineTo(p.x, p.y)); pCtx.stroke();
@@ -243,13 +305,53 @@
             p.x += p.vx; p.y += p.vy; p.life -= 0.025;
             if(p.life <= 0) { blastParticles.splice(i, 1); continue; }
             pCtx.fillStyle = p.color; pCtx.globalAlpha = p.life;
-            pCtx.beginPath(); pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
+            pCtx.beginPath();
+            pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
         }
         pCtx.globalAlpha = 1;
 
         requestAnimationFrame(renderLoop);
     }
     requestAnimationFrame(renderLoop);
+
+    // --- 全螢幕放大與儲存邏輯 ---
+    function openFullscreen(url, filename) {
+        currentZoomUrl = url;
+        currentZoomFilename = filename;
+        document.getElementById('fullscreen-img').src = url;
+        document.getElementById('fullscreen-layer').classList.remove('hidden');
+    }
+
+    document.getElementById('btn-close').onclick = () => {
+        document.getElementById('fullscreen-layer').classList.add('hidden');
+    };
+
+    document.getElementById('btn-save').onclick = async () => {
+        try {
+            // 將圖片抓取為 Blob 再下載，解決跨域下載可能遇到的直接開啟問題
+            const res = await fetch(currentZoomUrl);
+            const blob = await res.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = currentZoomFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch(e) {
+            // 備用方案 (直接開啟新分頁下載)
+            console.error('Blob download failed, using fallback.', e);
+            const a = document.createElement('a');
+            a.href = currentZoomUrl;
+            a.download = currentZoomFilename;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    };
 
     // --- 流程控制 ---
     function showScreen(id) {
@@ -353,9 +455,10 @@
         container.className = 'card-container';
         
         if(drawnCards.length > 1) {
-            container.style.height = '20vh'; 
+            container.style.height = '20vh';
             const row = Math.floor(idx / 5); const col = idx % 5;
-            container.style.left = `${10 + col * 16}%`; container.style.top = `${25 + row * 25}%`;
+            container.style.left = `${10 + col * 16}%`;
+            container.style.top = `${25 + row * 25}%`;
         }
 
         const glow = result.type === 'rare' ? 'var(--gold-glow)' : 'var(--white-glow)';
@@ -373,9 +476,14 @@
     }
 
     function flipCard(el, type, id) {
-        if(el.classList.contains('is-flipped')) return;
-        el.classList.add('is-flipped');
+        // 如果已經翻面了，再點擊就會觸發放大
+        if(el.classList.contains('is-flipped')) {
+            const frontImgSrc = `${BASE_URL}cards_${type}/${id}.PNG`;
+            openFullscreen(frontImgSrc, `porkemon_${type}_${id}.png`);
+            return;
+        }
         
+        el.classList.add('is-flipped');
         let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
         if(!data[type].includes(id)) data[type].push(id);
         localStorage.setItem('porkemon_' + currentUser, JSON.stringify(data));
@@ -386,7 +494,7 @@
         const gridCommon = document.getElementById('grid-common');
         const gridRare = document.getElementById('grid-rare');
         let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
-        
+
         // 更新進度文字
         document.getElementById('progress-common').innerText = `${data.common.length} / ${COMMON_MAX}`;
         document.getElementById('progress-rare').innerText = `${data.rare.length} / ${RARE_MAX}`;
@@ -400,6 +508,12 @@
             const slot = document.createElement('div');
             slot.className = `card-slot ${isOwned ? 'owned' : 'unowned'}`;
             slot.innerHTML = `<img src="${imgSrc}">`;
+            
+            // 只有已獲得的卡片可被點擊並放大
+            if(isOwned) {
+                slot.style.cursor = 'pointer';
+                slot.onclick = () => openFullscreen(imgSrc, `common_${id}.png`);
+            }
             gridCommon.appendChild(slot);
         }
 
@@ -412,6 +526,12 @@
             const slot = document.createElement('div');
             slot.className = `card-slot rare ${isOwned ? 'owned' : 'unowned'}`;
             slot.innerHTML = `<img src="${imgSrc}">`;
+            
+            // 只有已獲得的卡片可被點擊並放大
+            if(isOwned) {
+                slot.style.cursor = 'pointer';
+                slot.onclick = () => openFullscreen(imgSrc, `rare_${id}.png`);
+            }
             gridRare.appendChild(slot);
         }
     }
