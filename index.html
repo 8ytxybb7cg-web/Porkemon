@@ -431,8 +431,8 @@
         const zone = document.getElementById('slash-zone');
         zone.classList.add('hidden');
 
-        // 判定 God Pack 機制 (0.01% 機率，僅限十連抽)
-        if (num === 10 && Math.random() < 0.001) {
+        // 判定 God Pack 機制 (0.5% 機率，僅限十連抽)
+        if (num === 10 && Math.random() < 0.005) {
             isCurrentDrawGodPack = true;
             
             // 準備不重複的 SR 籤筒
@@ -477,15 +477,15 @@
             `;
             stage.appendChild(wrap);
             
-            // 如果不是 God Pack，則執行正常的隨機抽卡邏輯
+            // 如果不是 God Pack，則執行正常的隨機抽卡邏輯，Super Rare (SR): 1% ，Rare 7%
             if (!isCurrentDrawGodPack) {
                 const rand = Math.random();
                 let cardType, maxId;
                 
-                if (rand < 0.005) {
+                if (rand < 0.01) {
                     cardType = 'super_rare';
                     maxId = TOTAL_SUPER_RARE;
-                } else if (rand < 0.035) { 
+                } else if (rand < 0.08) { 
                     cardType = 'rare';
                     maxId = TOTAL_RARE;
                 } else {
