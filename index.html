@@ -477,7 +477,7 @@
             `;
             stage.appendChild(wrap);
             
-            // 如果不是 God Pack，則執行正常的隨機抽卡邏輯，Super Rare 1% ，Rare 7%
+            // 如果不是 God Pack，則執行正常的隨機抽卡邏輯，Super Rare 1% ，Rare 3%
             if (!isCurrentDrawGodPack) {
                 const rand = Math.random();
                 let cardType, maxId;
@@ -485,7 +485,7 @@
                 if (rand < 0.01) {
                     cardType = 'super_rare';
                     maxId = TOTAL_SUPER_RARE;
-                } else if (rand < 0.08) { 
+                } else if (rand < 0.04) { 
                     cardType = 'rare';
                     maxId = TOTAL_RARE;
                 } else {
