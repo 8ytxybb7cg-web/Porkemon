@@ -6,6 +6,7 @@
     <title>抽肥豬卡 - Porkémon</title>
     <style>
         :root {
+            --purple-glow: 0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0;
             --gold-glow: 0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800;
             --white-glow: 0 0 20px #ffffff, 0 0 40px #cccccc, 0 0 80px #aaaaaa;
         }
@@ -141,16 +142,7 @@
             pointer-events: auto;
         }
 
-                #save-hint {
-            color: #fff; 
-            margin-top: 5px; /* 縮小與上方提示字的間距 */
-            font-size: 16px; 
-            font-weight: bold;
-            opacity: 0; 
-            transition: opacity 0.3s ease; 
-            height: 20px;
-        }
-
+        #save-hint { color: #fff; margin-top: 15px; font-size: 16px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; height: 20px; }
         .overlay-controls { margin-top: 20px; display: flex; gap: 20px; pointer-events: auto; }
     </style>
 </head>
@@ -200,7 +192,6 @@
 
 <div id="fullscreen-overlay" class="hidden">
     <img id="fullscreen-card-img" src="" alt="放大卡片">
-        <div style="color: #aaa; font-size: 14px; margin-top: 12px;">長按圖片可進行儲存</div>
     <div id="save-hint"></div>
     <div class="overlay-controls">
         <button class="pill-btn" onclick="downloadImage()">儲存</button>
@@ -213,9 +204,11 @@
     const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
     const IMG_PACK = BASE_URL + "packs/pack.png";
     const IMG_BACK = BASE_URL + "back/back.png";
+
     // 【日後維護請改這裡】卡牌分類總數量，更新時請人手更改這兩個數值即可
     const TOTAL_COMMON = 21;
-    const TOTAL_RARE = 20;
+    const TOTAL_RARE = 14;
+    const TOTAL_SUPER_RARE = 6;
 
     let currentUser = "";
     let drawnCards = [];
@@ -274,7 +267,7 @@
                 c.x += c.vx; c.y += c.vy; c.r += c.vr;
                 if(c.x < -100) c.x = bgCanvas.width+100; if(c.x > bgCanvas.width+100) c.x = -100;
                 if(c.y < -100) c.y = bgCanvas.height+100; if(c.y > bgCanvas.height+100) c.y = -100;
-     
+                
                 bgCtx.save();
                 bgCtx.translate(c.x, c.y); bgCtx.rotate(c.r); bgCtx.globalAlpha = 0.2;
                 if(backImgObj.complete) bgCtx.drawImage(backImgObj, -50*c.s, -70*c.s, 100*c.s, 140*c.s);
@@ -353,11 +346,23 @@
             `;
             stage.appendChild(wrap);
             
-            const isRare = Math.random() < 0.03;
-            // 使用新設定的卡牌最大數量變數
-            const maxId = isRare ? TOTAL_RARE : TOTAL_COMMON;
+            // 加入機率判定：SR 0.5%, Rare 3.0%, Common 96.5%
+            const rand = Math.random();
+            let cardType, maxId;
+            
+            if (rand < 0.005) {
+                cardType = 'super_rare';
+                maxId = TOTAL_SUPER_RARE;
+            } else if (rand < 0.035) { // 0.005 + 0.03 = 0.035
+                cardType = 'rare';
+                maxId = TOTAL_RARE;
+            } else {
+                cardType = 'common';
+                maxId = TOTAL_COMMON;
+            }
+            
             const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
-            drawnCards.push({type: isRare ? 'rare' : 'common', id: cardId});
+            drawnCards.push({type: cardType, id: cardId});
         }
 
         setTimeout(() => {
@@ -389,8 +394,16 @@
     function executeCut() {
         document.getElementById('slash-zone').classList.add('hidden');
         const packs = document.querySelectorAll('.pack-wrapper');
+        
+        let hasSuperRare = drawnCards.some(c => c.type === 'super_rare');
         let hasRare = drawnCards.some(c => c.type === 'rare');
-        triggerBlast(hasRare ? '#ffd700' : '#ffffff');
+        
+        let blastColor = '#ffffff';
+        if (hasSuperRare) blastColor = '#a020f0';
+        else if (hasRare) blastColor = '#ffd700';
+        
+        triggerBlast(blastColor);
+        
         packs.forEach((p, idx) => {
             const left = p.querySelector('.split-left');
             const right = p.querySelector('.split-right');
@@ -417,6 +430,7 @@
         const stage = document.getElementById('stage');
         const container = document.createElement('div');
         container.className = 'card-container';
+        
         if(drawnCards.length > 1) {
             container.style.width = '25vw';
             container.style.maxWidth = '150px';
@@ -425,7 +439,10 @@
             container.style.top = `${20 + row * 30}%`;
         }
 
-        const glow = result.type === 'rare' ? 'var(--gold-glow)' : 'var(--white-glow)';
+        let glow = 'var(--white-glow)';
+        if (result.type === 'super_rare') glow = 'var(--purple-glow)';
+        else if (result.type === 'rare') glow = 'var(--gold-glow)';
+        
         const frontImgSrc = `${BASE_URL}cards_${result.type}/${result.id}.PNG`;
 
         container.innerHTML = `
@@ -450,20 +467,26 @@
         
         // 第一次點擊：翻轉並儲存進度
         el.classList.add('is-flipped');
-        let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
+        
+        // 為了相容舊玩家資料，加入超級稀有卡陣列的預設檢查
+        let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[], "super_rare":[]}');
+        if(!data.super_rare) data.super_rare = [];
+        
         if(!data[type].includes(id)) data[type].push(id);
         localStorage.setItem('porkemon_' + currentUser, JSON.stringify(data));
     }
 
     // --- 放大檢視 (Fullscreen Overlay) 功能 ---
     function openFullscreen(type, id) {
-        const isRare = type === 'rare';
         const imgSrc = `${BASE_URL}cards_${type}/${id}.PNG`;
         const overlay = document.getElementById('fullscreen-overlay');
         const img = document.getElementById('fullscreen-card-img');
         
         img.src = imgSrc;
-        img.style.boxShadow = isRare ? 'var(--gold-glow)' : 'var(--white-glow)';
+        
+        if (type === 'super_rare') img.style.boxShadow = 'var(--purple-glow)';
+        else if (type === 'rare') img.style.boxShadow = 'var(--gold-glow)';
+        else img.style.boxShadow = 'var(--white-glow)';
         
         overlay.classList.remove('hidden');
         // 觸發重繪以應用 CSS transition
@@ -528,68 +551,58 @@
     // --- 收藏圖鑑與重置 ---
     function resetCollection() {
         if(confirm(`確定要重置 ${currentUser} 的收藏嗎？此操作無法還原。`)) {
-            localStorage.setItem('porkemon_' + currentUser, '{"common":[], "rare":[]}');
+            localStorage.setItem('porkemon_' + currentUser, '{"common":[], "rare":[], "super_rare":[]}');
             updateCollectionUI(); // 重新渲染畫面
         }
     }
 
     function updateCollectionUI() {
         const content = document.getElementById('collection-content');
-        let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[]}');
+        let data = JSON.parse(localStorage.getItem('porkemon_' + currentUser) || '{"common":[], "rare":[], "super_rare":[]}');
+        if(!data.super_rare) data.super_rare = [];
+        
         content.innerHTML = "";
+
+        // --- 顯示 超級稀有卡 (Super Rare) 分組 (置於最上方) ---
+        const srTitle = document.createElement('div');
+        srTitle.className = 'collection-group-title';
+        srTitle.innerText = `超級稀有卡 (${data.super_rare.length}/${TOTAL_SUPER_RARE})`;
+        content.appendChild(srTitle);
         
-        // --- 顯示 普通卡 (Common) 分組 ---
-        const commonTitle = document.createElement('div');
-        commonTitle.className = 'collection-group-title';
-        // 加入計數器：目前擁有數量 / 總數量
-        commonTitle.innerText = `普通卡 (${data.common.length}/${TOTAL_COMMON})`;
-        content.appendChild(commonTitle);
-        
-        const commonGrid = document.createElement('div');
-        commonGrid.className = 'collection-grid';
-        
-        // 根據自訂常數 TOTAL_COMMON 迴圈產生
-        for(let i=1; i<=TOTAL_COMMON; i++) {
+        const srGrid = document.createElement('div');
+        srGrid.className = 'collection-grid';
+        for(let i=1; i<=TOTAL_SUPER_RARE; i++) {
             const id = i.toString().padStart(3, '0');
-            const isOwned = data.common.includes(id);
+            const isOwned = data.super_rare.includes(id);
             const slot = document.createElement('div');
             slot.className = 'card-slot';
+            const imgSrc = isOwned ? `${BASE_URL}cards_super_rare/${id}.PNG` : IMG_BACK;
+            slot.innerHTML = `<img src="${imgSrc}" alt="Super Rare ${id}">`;
             
-            // 未擁有時顯示背面圖，擁有則顯示正面圖
-            const imgSrc = isOwned ? `${BASE_URL}cards_common/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Common ${id}">`;
-            
-            // 只有已擁有的卡片可以點擊放大
             if(isOwned) {
-                slot.onclick = () => openFullscreen('common', id);
+                slot.onclick = () => openFullscreen('super_rare', id);
                 slot.style.cursor = 'pointer';
             }
-            commonGrid.appendChild(slot);
+            srGrid.appendChild(slot);
         }
-        content.appendChild(commonGrid);
-        
+        content.appendChild(srGrid);
+
         // --- 顯示 稀有卡 (Rare) 分組 ---
         const rareTitle = document.createElement('div');
         rareTitle.className = 'collection-group-title';
-        // 加入計數器：目前擁有數量 / 總數量
         rareTitle.innerText = `稀有卡 (${data.rare.length}/${TOTAL_RARE})`;
         content.appendChild(rareTitle);
         
         const rareGrid = document.createElement('div');
         rareGrid.className = 'collection-grid';
-        
-        // 根據自訂常數 TOTAL_RARE 迴圈產生
         for(let i=1; i<=TOTAL_RARE; i++) {
             const id = i.toString().padStart(3, '0');
             const isOwned = data.rare.includes(id);
             const slot = document.createElement('div');
             slot.className = 'card-slot';
-            
-            // 未擁有時顯示背面圖，擁有則顯示正面圖
             const imgSrc = isOwned ? `${BASE_URL}cards_rare/${id}.PNG` : IMG_BACK;
             slot.innerHTML = `<img src="${imgSrc}" alt="Rare ${id}">`;
             
-            // 只有已擁有的卡片可以點擊放大
             if(isOwned) {
                 slot.onclick = () => openFullscreen('rare', id);
                 slot.style.cursor = 'pointer';
@@ -597,6 +610,30 @@
             rareGrid.appendChild(slot);
         }
         content.appendChild(rareGrid);
+
+        // --- 顯示 普通卡 (Common) 分組 (置於最下方) ---
+        const commonTitle = document.createElement('div');
+        commonTitle.className = 'collection-group-title';
+        commonTitle.innerText = `普通卡 (${data.common.length}/${TOTAL_COMMON})`;
+        content.appendChild(commonTitle);
+        
+        const commonGrid = document.createElement('div');
+        commonGrid.className = 'collection-grid';
+        for(let i=1; i<=TOTAL_COMMON; i++) {
+            const id = i.toString().padStart(3, '0');
+            const isOwned = data.common.includes(id);
+            const slot = document.createElement('div');
+            slot.className = 'card-slot';
+            const imgSrc = isOwned ? `${BASE_URL}cards_common/${id}.PNG` : IMG_BACK;
+            slot.innerHTML = `<img src="${imgSrc}" alt="Common ${id}">`;
+            
+            if(isOwned) {
+                slot.onclick = () => openFullscreen('common', id);
+                slot.style.cursor = 'pointer';
+            }
+            commonGrid.appendChild(slot);
+        }
+        content.appendChild(commonGrid);
     }
 </script>
 </body>
