@@ -7,22 +7,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --purple-glow: 0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0;
-            --gold-glow: 0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800;
-            --white-glow: 0 0 20px #ffffff, 0 0 40px #cccccc, 0 0 80px #aaaaaa;
-        }
-
-        /* God Pack 流動彩虹光暈特效 */
-        @keyframes rainbow-glow-anim {
-            0% { box-shadow: 0 0 20px #ff0000, 0 0 40px #ff7f00, 0 0 80px #ffff00; }
-            20% { box-shadow: 0 0 20px #ffff00, 0 0 40px #00ff00, 0 0 80px #0000ff; }
-            40% { box-shadow: 0 0 20px #00ff00, 0 0 40px #0000ff, 0 0 80px #4b0082; }
-            60% { box-shadow: 0 0 20px #0000ff, 0 0 40px #4b0082, 0 0 80px #9400d3; }
-            80% { box-shadow: 0 0 20px #4b0082, 0 0 40px #9400d3, 0 0 80px #ff0000; }
-            100% { box-shadow: 0 0 20px #ff0000, 0 0 40px #ff7f00, 0 0 80px #ffff00; }
-        }
-        .rainbow-glow-anim {
-            animation: rainbow-glow-anim 1.5s linear infinite !important;
+            /* 更新光環顏色定義 */
+            --blue-glow: 0 0 20px #0055ff, 0 0 40px #00aaff, 0 0 80px #88ddff;    /* 普通 */
+            --purple-glow: 0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0;  /* 稀有 */
+            --gold-glow: 0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800;    /* 超級稀有 */
+            --platinum-glow: 0 0 20px #ffffff, 0 0 40px #e5e4e2, 0 0 80px #fffafa, 0 0 100px #ffffff; /* God Pack 白金 */
         }
 
         body, html {
@@ -42,17 +31,45 @@
 
         .screen { 
             flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            width: 100%; height: 100%; min-height: 0;
+            width: 100%; height: 100%; min-height: 0; position: relative;
         }
         .hidden { display: none !important; }
+
+        /* God Pack 專屬彩虹背景特效 */
+        #god-pack-bg {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 250vw; height: 250vh;
+            transform: translate(-50%, -50%);
+            background: conic-gradient(from 0deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
+            animation: spin-rainbow 4s linear infinite;
+            opacity: 0.6;
+            z-index: -2; /* 置於 main-screen 內層最底部 */
+            pointer-events: none;
+        }
+        #god-pack-glow {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 65%);
+            z-index: -1;
+            pointer-events: none;
+            animation: pulse-glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes spin-rainbow {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @keyframes pulse-glow {
+            from { opacity: 0.5; }
+            to { opacity: 1; }
+        }
 
         /* 身份選擇 */
         .select-wrapper { position: relative; margin-bottom: 50px; pointer-events: auto; display: inline-block; }
         #user-select {
             appearance: none; -webkit-appearance: none; background: transparent; border: none; color: white;
             font-size: 48px; font-weight: bold; 
-            padding: 0 40px; cursor: pointer; outline: none;
-            text-align: center; text-align-last: center; 
+            padding: 0 40px; cursor: pointer; outline: none; text-align: center; text-align-last: center; 
         }
         .custom-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 24px; color: #888; pointer-events: none; }
         
@@ -60,7 +77,7 @@
         #btn-enter:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* 抽卡舞台 */
-        #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: auto; }
 
         /* 切開動畫與包裝容器 */
         .pack-wrapper {
@@ -84,12 +101,18 @@
 
         /* 3D 翻轉卡片容器 */
         .card-container {
-            position: absolute; width: 50vh; max-width: 280px; aspect-ratio: 63/88; 
+            position: absolute;
+            width: 50vh; max-width: 280px; aspect-ratio: 63/88; 
             perspective: 1000px; display: none; z-index: 100; opacity: 0;
             transition: opacity 1s ease-out, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translateY(100px) scale(0.8); pointer-events: auto; cursor: pointer;
+            transform: translate(-50%, calc(-50% + 100px)) scale(0.5); /* 初始位置與縮放 */
+            transform-origin: center center;
+            pointer-events: auto; cursor: pointer;
         }
-        .card-container.reveal { opacity: 1; transform: translateY(0) scale(1); }
+        .card-container.reveal { 
+            opacity: 1; 
+            transform: translate(var(--tx, -50%), var(--ty, -50%)) scale(var(--tscale, 1));
+        }
         
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s; transform-style: preserve-3d; }
         .card-front, .card-back {
@@ -165,10 +188,14 @@
     </section>
 
     <section id="main-screen" class="screen hidden">
-        <div id="stage">
+        <div id="god-pack-bg" class="hidden"></div>
+        <div id="god-pack-glow" class="hidden"></div>
+        
+        <div id="stage" onclick="flipAllRemaining()">
             <div id="slash-zone" class="hidden"></div>
         </div>
-        <div class="bottom-nav">
+        
+        <div class="bottom-nav hidden" id="action-buttons">
             <button class="draw-btn" onclick="prepareDraw(1)">單抽</button>
             <button class="draw-btn" onclick="prepareDraw(10)">十連抽</button>
             <button class="draw-btn" style="background:none; color:white; border:1px solid white;" onclick="showScreen('collection-screen')">收藏</button>
@@ -205,21 +232,20 @@
     const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
     const IMG_PACK = BASE_URL + "packs/pack.png";
     const IMG_BACK = BASE_URL + "back/back.png";
-
-    const TOTAL_COMMON = 26;
+    const TOTAL_COMMON = 24;
     const TOTAL_RARE = 15;
     const TOTAL_SUPER_RARE = 7;
 
     let currentUser = "";
-    // 預設給予空資料結構，確保離線也能正常遊玩
     let currentCollectionData = { common: [], rare: [], super_rare: [] }; 
     let drawnCards = [];
+    let flippedCount = 0; // 用於追蹤當前翻開的卡牌數量
     let isSlashing = false;
     let gameState = "login";
     let isCurrentDrawGodPack = false;
 
     // ==========================================
-    // 2. 獨立且優先執行的 Canvas 渲染邏輯 (防止畫面黑掉)
+    // 2. 獨立且優先執行的 Canvas 渲染邏輯
     // ==========================================
     const bgCanvas = document.getElementById('bg-canvas');
     const bgCtx = bgCanvas.getContext('2d');
@@ -241,7 +267,6 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // 初始化粒子
     for(let i=0; i<60; i++) {
         baseParticles.push({ x: Math.random()*bgCanvas.width, y: Math.random()*bgCanvas.height, s: Math.random()*2, v: 0.5+Math.random()*1 });
     }
@@ -253,7 +278,6 @@
         });
     }
 
-    // 動畫迴圈
     function renderLoop() {
         try {
             bgCtx.fillStyle = '#000';
@@ -304,13 +328,10 @@
                 pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
             }
             pCtx.globalAlpha = 1;
-        } catch (error) {
-            // 忽略 Canvas 偶發錯誤，防止中斷整個程式
-        }
+        } catch (error) {}
 
         requestAnimationFrame(renderLoop);
     }
-    // 立即啟動渲染迴圈！保證背景能動
     requestAnimationFrame(renderLoop);
 
     // ==========================================
@@ -320,8 +341,6 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cmhhdHpkeXBpd3dnbW1mYnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1MTM4NzUsImV4cCI6MjA4MTA4OTg3NX0.s6w2f3pKovuFYkR09bLvPBVJUa6b3Uw2gIXrlw9teb8'; 
 
     let supabaseClient = null;
-    
-    // 使用 try-catch 包裝，避免 Key 貼錯格式導致全域崩潰
     try {
         if (typeof window.supabase !== 'undefined') {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -329,9 +348,8 @@
             console.error("未能載入 Supabase 核心套件");
         }
     } catch(err) {
-        console.error("Supabase 初始化失敗 (請檢查金鑰格式):", err);
+        console.error("Supabase 初始化失敗:", err);
     }
-
 
     // ==========================================
     // 4. UI 切換與遊戲邏輯
@@ -341,15 +359,21 @@
         document.getElementById(id).classList.remove('hidden');
 
         if(id === 'collection-screen') {
-            isCurrentDrawGodPack = false; // 離開抽卡畫面重置 God Pack 狀態
+            isCurrentDrawGodPack = false;
+            document.getElementById('god-pack-bg').classList.add('hidden');
+            document.getElementById('god-pack-glow').classList.add('hidden');
             document.body.style.touchAction = 'pan-y'; 
             updateCollectionUI();
+            document.getElementById('action-buttons').classList.remove('hidden');
+        } else if (id === 'main-screen' && drawnCards.length === 0) {
+            // 如果剛進入卡池畫面且尚未抽卡，確保顯示選單
+            document.getElementById('action-buttons').classList.remove('hidden');
+            document.body.style.touchAction = 'none';
         } else {
             document.body.style.touchAction = 'none';
         }
     }
 
-    // 登入驗證與資料拉取
     document.getElementById('btn-enter').onclick = async () => {
         currentUser = document.getElementById('user-select').value;
         document.getElementById('user-title').innerText = currentUser + " 的收藏";
@@ -359,8 +383,7 @@
         btn.disabled = true;
 
         try {
-            if (!supabaseClient) throw new Error("資料庫模組未能啟動，請檢查網路連線或系統設定。");
-
+            if (!supabaseClient) throw new Error("資料庫模組未能啟動。");
             const { data, error } = await supabaseClient
                 .from('user_collections')
                 .select('collection')
@@ -370,30 +393,22 @@
             if (error) throw error;
 
             if (data) {
-                // 有紀錄，套用並修補可能缺少的屬性
                 currentCollectionData = data.collection || { common: [], rare: [], super_rare: [] };
                 if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
                 if(!currentCollectionData.rare) currentCollectionData.rare = [];
                 if(!currentCollectionData.common) currentCollectionData.common = [];
             } else {
-                // 表格內無此用戶，執行初始化新增
                 currentCollectionData = { common: [], rare: [], super_rare: [] };
-
                 const { error: insertError } = await supabaseClient
                     .from('user_collections')
                     .insert({ username: currentUser, collection: currentCollectionData });
-
                 if (insertError) throw insertError;
             }
-
         } catch (err) {
             console.error("Supabase 發生例外狀況:", err);
-            // 彈出提示，讓手機端能夠知道具體報錯
-            alert("雲端同步異常，原因：\n" + (err.message || JSON.stringify(err)) + "\n\n將自動啟用「單機離線模式」進入卡池供您測試。");
-            // 離線模式重置為空資料
+            alert("雲端同步異常，原因：\n" + (err.message || JSON.stringify(err)) + "\n\n將自動啟用「單機離線模式」。");
             currentCollectionData = { common: [], rare: [], super_rare: [] };
         } finally {
-            // 無論連線成功或失敗，都強制解除凍結並進入遊戲
             gameState = 'drawing';
             showScreen('main-screen');
             btn.innerText = "進入卡池";
@@ -401,67 +416,60 @@
         }
     };
 
-    // 背景更新 Supabase 資料 (使用 Upsert 更安全)
     async function saveUserCollection() {
         if (!supabaseClient) return;
-
         try {
-            const { error } = await supabaseClient
+            await supabaseClient
                 .from('user_collections')
                 .upsert({ 
                     username: currentUser,
                     collection: currentCollectionData, 
                     updated_at: new Date().toISOString() 
                 });
-
-            if(error) console.error("雲端同步儲存失敗:", error);
         } catch (err) {
             console.error("背景儲存發生錯誤:", err);
         }
     }
 
     function prepareDraw(num) {
+        // 隱藏選單防止誤觸
+        document.getElementById('action-buttons').classList.add('hidden');
+        
         const stage = document.getElementById('stage');
         Array.from(stage.children).forEach(child => {
             if(child.id !== 'slash-zone') child.remove();
         });
-        
+
         drawnCards = [];
+        flippedCount = 0;
         isCurrentDrawGodPack = false;
+        document.getElementById('god-pack-bg').classList.add('hidden');
+        document.getElementById('god-pack-glow').classList.add('hidden');
+        
         const zone = document.getElementById('slash-zone');
         zone.classList.add('hidden');
 
-        // 判定 God Pack 機制 (0.5% 機率，僅限十連抽)
         if (num === 10 && Math.random() < 0.005) {
             isCurrentDrawGodPack = true;
-            
-            // 準備不重複的 SR 籤筒
             let srPool = Array.from({length: TOTAL_SUPER_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
-            srPool.sort(() => Math.random() - 0.5); // 洗牌
+            srPool.sort(() => Math.random() - 0.5); 
 
             let selectedCards = [];
             if (TOTAL_SUPER_RARE >= 10) {
-                // 如果 SR 大於等於 10 張，直接抽 10 張
                 selectedCards = srPool.slice(0, 10).map(id => ({ type: 'super_rare', id: id, isGodPack: true }));
             } else {
-                // 如果 SR 小於 10 張，全數抽光
                 selectedCards = srPool.map(id => ({ type: 'super_rare', id: id, isGodPack: true }));
-                
-                // 剩餘空位用不重複的 Rare 補齊
                 let rPool = Array.from({length: TOTAL_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
-                rPool.sort(() => Math.random() - 0.5); // 洗牌
+                rPool.sort(() => Math.random() - 0.5); 
                 
                 let needed = 10 - selectedCards.length;
                 let rareSelected = rPool.slice(0, needed).map(id => ({ type: 'rare', id: id, isGodPack: true }));
                 selectedCards = selectedCards.concat(rareSelected);
             }
-            
-            // 再次洗牌，讓 SR 和 Rare 在畫面上隨機散佈
             selectedCards.sort(() => Math.random() - 0.5);
             drawnCards = selectedCards;
         }
 
-        // 產生卡包外觀與內容設定
         for(let i=0; i<num; i++) {
             const wrap = document.createElement('div');
             wrap.className = 'pack-wrapper';
@@ -471,26 +479,23 @@
             let offsetX = num > 1 ? (Math.random()-0.5)*20 : 0;
             let offsetY = num > 1 ? (Math.random()-0.5)*20 : 0;
             wrap.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(${(Math.random()-0.5)*4}deg)`;
+            
             wrap.innerHTML = `
                 <div class="pack-half split-left" style="background-image:url(${IMG_PACK})"></div>
                 <div class="pack-half split-right" style="background-image:url(${IMG_PACK})"></div>
             `;
             stage.appendChild(wrap);
             
-            // 如果不是 God Pack，則執行正常的隨機抽卡邏輯，Super Rare 1% ，Rare 3%
             if (!isCurrentDrawGodPack) {
                 const rand = Math.random();
                 let cardType, maxId;
                 
                 if (rand < 0.01) {
-                    cardType = 'super_rare';
-                    maxId = TOTAL_SUPER_RARE;
+                    cardType = 'super_rare'; maxId = TOTAL_SUPER_RARE;
                 } else if (rand < 0.04) { 
-                    cardType = 'rare';
-                    maxId = TOTAL_RARE;
+                    cardType = 'rare'; maxId = TOTAL_RARE;
                 } else {
-                    cardType = 'common';
-                    maxId = TOTAL_COMMON;
+                    cardType = 'common'; maxId = TOTAL_COMMON;
                 }
                 
                 const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
@@ -504,12 +509,12 @@
         }, 50);
     }
 
-    // 水果忍者切開偵測
     const uiLayer = document.getElementById('ui-layer');
     uiLayer.addEventListener('touchstart', (e) => {
         if(document.getElementById('slash-zone').classList.contains('hidden')) return;
         isSlashing = true; slashPath = [{x: e.touches[0].clientX, y: e.touches[0].clientY}];
     });
+
     uiLayer.addEventListener('touchmove', (e) => {
         if(!isSlashing) return;
         const x = e.touches[0].clientX; const y = e.touches[0].clientY;
@@ -521,19 +526,23 @@
             isSlashing = false;
         }
     });
+
     uiLayer.addEventListener('touchend', () => { isSlashing = false; slashPath = []; });
 
     function executeCut() {
         document.getElementById('slash-zone').classList.add('hidden');
         const packs = document.querySelectorAll('.pack-wrapper');
-        
         let hasSuperRare = drawnCards.some(c => c.type === 'super_rare');
         let hasRare = drawnCards.some(c => c.type === 'rare');
         
         let blastColor = '#ffffff';
-        if (isCurrentDrawGodPack) blastColor = 'rainbow'; // God Pack 特別顏色標記
-        else if (hasSuperRare) blastColor = '#a020f0';
-        else if (hasRare) blastColor = '#ffd700';
+        if (isCurrentDrawGodPack) {
+            blastColor = 'rainbow';
+            document.getElementById('god-pack-bg').classList.remove('hidden');
+            document.getElementById('god-pack-glow').classList.remove('hidden');
+        }
+        else if (hasSuperRare) blastColor = '#ffd700';
+        else if (hasRare) blastColor = '#a020f0';
         
         triggerBlast(blastColor);
         
@@ -543,13 +552,13 @@
             left.style.transform = 'translate(-30%, 50%) rotate(-30deg)';
             right.style.transform = 'translate(30%, 50%) rotate(30deg)';
             left.style.opacity = '0'; right.style.opacity = '0';
+           
             setTimeout(() => { showResultCard(idx); }, 500);
         });
     }
 
     function triggerBlast(color) {
         const rainbowColors = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#9400d3'];
-        
         for(let i=0; i<80; i++) {
             let pColor = color === 'rainbow' ? rainbowColors[Math.floor(Math.random() * rainbowColors.length)] : color;
             
@@ -566,55 +575,97 @@
         const stage = document.getElementById('stage');
         const container = document.createElement('div');
         container.className = 'card-container';
-        
-        if(drawnCards.length > 1) {
-            container.style.width = '25vw';
-            container.style.maxWidth = '150px';
-            const row = Math.floor(idx / 5); const col = idx % 5;
-            container.style.left = `${10 + col * 16}%`;
-            container.style.top = `${20 + row * 30}%`;
+
+        let tx = '-50%', ty = '-50%', tscale = '1';
+
+        if(drawnCards.length > 1) { // 3-4-3 排列
+            container.style.width = '22vw'; 
+            container.style.maxWidth = '90px';
+            tscale = '0.85'; 
+
+            let x, y;
+            if (idx < 3) {
+                y = '25%'; x = `${18 + idx * 32}%`; 
+            } else if (idx < 7) {
+                y = '50%'; x = `${16 + (idx - 3) * 22.66}%`; 
+            } else {
+                y = '75%'; x = `${18 + (idx - 7) * 32}%`; 
+            }
+            container.style.left = x;
+            container.style.top = y;
+        } else {
+            container.style.left = '50%';
+            container.style.top = '50%';
+            tscale = '1.2';
         }
 
-        let cardBackClass = "card-back";
-        let cardBackStyle = `background-image:url('${IMG_BACK}');`;
+        container.style.setProperty('--tx', tx);
+        container.style.setProperty('--ty', ty);
+        container.style.setProperty('--tscale', tscale);
 
-        // 如果是 God Pack 產出的卡片，附加流動彩虹特效 class
+        let cardBackStyle = `background-image:url('${IMG_BACK}');`;
+        
         if (result.isGodPack) {
-            cardBackClass += " rainbow-glow-anim";
+            cardBackStyle += ` box-shadow: var(--platinum-glow);`;
         } else {
-            let glow = 'var(--white-glow)';
-            if (result.type === 'super_rare') glow = 'var(--purple-glow)';
-            else if (result.type === 'rare') glow = 'var(--gold-glow)';
+            let glow = 'var(--blue-glow)'; // 預設普通
+            if (result.type === 'super_rare') glow = 'var(--gold-glow)';
+            else if (result.type === 'rare') glow = 'var(--purple-glow)';
             cardBackStyle += ` box-shadow:${glow};`;
         }
         
         const frontImgSrc = `${BASE_URL}cards_${result.type}/${result.id}.PNG`;
-        
         container.innerHTML = `
-            <div class="card-inner" onclick="flipCard(this, '${result.type}', '${result.id}')">
-                <div class="${cardBackClass}" style="${cardBackStyle}"></div>
+            <div class="card-inner" onclick="flipCard(event, this, '${result.type}', '${result.id}')">
+                <div class="card-back" style="${cardBackStyle}"></div>
                 <div class="card-front" style="background-image:url('${frontImgSrc}')"></div>
             </div>
         `;
-        
         stage.appendChild(container);
         
         container.style.display = 'block';
         setTimeout(() => { container.classList.add('reveal'); }, 50 * idx);
     }
 
-    function flipCard(el, type, id) {
+    function checkDrawComplete() {
+        if (flippedCount === drawnCards.length) {
+            setTimeout(() => {
+                document.getElementById('action-buttons').classList.remove('hidden');
+            }, 500);
+        }
+    }
+
+    function flipCard(event, el, type, id) {
+        if (event) event.stopPropagation(); // 阻止冒泡到 stage 觸發全部翻開
+
         if(el.classList.contains('is-flipped')) {
-            openFullscreen(type, id);
+            if (flippedCount < drawnCards.length) {
+                flipAllRemaining(); // 若還有未翻開的，點擊已翻開卡牌視同翻開全部
+            } else {
+                openFullscreen(type, id);
+            }
             return;
         }
         
         el.classList.add('is-flipped');
-        
+        flippedCount++;
+        checkDrawComplete();
+
         if(!currentCollectionData[type].includes(id)) {
             currentCollectionData[type].push(id);
             saveUserCollection();
         }
+    }
+
+    function flipAllRemaining() {
+        if (drawnCards.length === 0 || flippedCount >= drawnCards.length) return;
+        
+        const unflipped = document.querySelectorAll('.card-inner:not(.is-flipped)');
+        unflipped.forEach((card, index) => {
+            setTimeout(() => {
+                card.click();
+            }, index * 100); 
+        });
     }
 
     function openFullscreen(type, id) {
@@ -624,15 +675,12 @@
         
         img.src = imgSrc;
         
-        // 如果目前是處於 God Pack 抽卡環節，放大圖也給予彩虹特效
         if (isCurrentDrawGodPack) {
-            img.className = 'rainbow-glow-anim';
-            img.style.boxShadow = 'none'; // 交由 animation 處理
+            img.style.boxShadow = 'var(--platinum-glow)';
         } else {
-            img.className = '';
-            if (type === 'super_rare') img.style.boxShadow = 'var(--purple-glow)';
-            else if (type === 'rare') img.style.boxShadow = 'var(--gold-glow)';
-            else img.style.boxShadow = 'var(--white-glow)';
+            if (type === 'super_rare') img.style.boxShadow = 'var(--gold-glow)';
+            else if (type === 'rare') img.style.boxShadow = 'var(--purple-glow)';
+            else img.style.boxShadow = 'var(--blue-glow)';
         }
         
         overlay.classList.remove('hidden');
@@ -661,7 +709,6 @@
             const response = await fetch(imgSrc);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
-            
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
@@ -677,7 +724,6 @@
 
             hint.innerText = "下載完成！";
             setTimeout(() => hint.style.opacity = '0', 2000);
-            
         } catch (error) {
             console.error('下載圖片失敗:', error);
             hint.innerText = "下載失敗，請長按圖片儲存";
