@@ -14,12 +14,12 @@
 
         body, html {
             margin: 0; padding: 0; width: 100%; 
-            height: 100%; height: 100dvh; /* 修復 iOS 底部工具列高度問題 */
+            height: 100%; height: 100dvh; 
             background-color: #000; color: white;
             font-family: "Microsoft JhengHei", sans-serif;
-            overflow: hidden; touch-action: none; /* 預設鎖定滑動，供抽卡遊戲使用 */
-            overscroll-behavior: none; /* 防止 iOS 邊界回彈效果 */
-            -webkit-touch-callout: none; /* 避免預設長按選單干擾 */
+            overflow: hidden; touch-action: none; 
+            overscroll-behavior: none; 
+            -webkit-touch-callout: none; 
         }
 
         /* 背景與 UI 層次 */
@@ -30,18 +30,18 @@
         .screen { 
             flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; 
             width: 100%; height: 100%;
-            min-height: 0; /* 修復 Safari Flexbox 子元素溢出問題，確保高度限制生效 */
+            min-height: 0; 
         }
         .hidden { display: none !important; }
 
-        /* 身份選擇 (名字置中) */
+        /* 身份選擇 */
         .select-wrapper { position: relative; margin-bottom: 50px; pointer-events: auto; display: inline-block; }
         #user-select {
             appearance: none; -webkit-appearance: none; background: transparent; border: none; color: white;
             font-size: 48px; font-weight: bold; 
-            padding: 0 40px; /* 左右對稱留白以保持視覺置中 */
+            padding: 0 40px; 
             cursor: pointer; outline: none; 
-            text-align: center; text-align-last: center; /* 強制文字置中 */
+            text-align: center; text-align-last: center; 
         }
         .custom-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 24px; color: #888; pointer-events: none; }
         
@@ -51,11 +51,11 @@
         /* 抽卡舞台 */
         #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
 
-        /* 切開動畫與包裝容器 (75x120比例，佔屏幕70%) */
+        /* 切開動畫與包裝容器 */
         .pack-wrapper {
             position: absolute; bottom: -100%; 
-            height: 70vh; /* 佔據屏幕 70% 高度 */
-            aspect-ratio: 75 / 120; /* 75mm x 120mm 比例 */
+            height: 70vh; 
+            aspect-ratio: 75 / 120; 
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             pointer-events: none;
         }
@@ -72,7 +72,7 @@
         /* 偵測區域 */
         #slash-zone { position: absolute; top: 0; left: 15%; width: 70%; height: 35%; z-index: 200; pointer-events: auto; }
 
-        /* 3D 翻轉卡片容器 (63x88比例) */
+        /* 3D 翻轉卡片容器 */
         .card-container {
             position: absolute; width: 50vh; max-width: 280px; aspect-ratio: 63/88; 
             perspective: 1000px; display: none; z-index: 100; opacity: 0;
@@ -105,19 +105,19 @@
         /* 收藏頁面 */
         #collection-screen { 
             justify-content: flex-start; padding-top: 30px; 
-            overflow: hidden; /* 確保整體容器不會被子元素撐破 */
+            overflow: hidden; 
             box-sizing: border-box;
         }
         .collection-header { padding: 10px 20px; text-align: center; width: 100%; flex-shrink: 0; pointer-events: auto; }
         .collection-controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
         
         #collection-content { 
-            flex: 1; /* 佔滿剩餘空間 */
+            flex: 1; 
             width: 100%; max-width: 600px; 
-            overflow-y: auto; /* 內部滾動 */
+            overflow-y: auto; 
             pointer-events: auto; 
             padding-bottom: 50px;
-            -webkit-overflow-scrolling: touch; /* iOS 滑動順暢化 */
+            -webkit-overflow-scrolling: touch; 
         }
         
         .collection-group-title { text-align: center; font-size: 22px; font-weight: bold; margin: 20px 0 15px; color: #fff; }
@@ -138,7 +138,6 @@
         #fullscreen-card-img {
             height: 65vh; max-height: 800px; aspect-ratio: 63/88;
             border-radius: 15px; object-fit: cover;
-            /* 修正：允許選取及長按觸發系統選單 */
             -webkit-user-select: auto; user-select: auto;
             -webkit-touch-callout: default; 
             pointer-events: auto;
@@ -204,29 +203,27 @@
 </div>
 
 <script>
-    // --- Supabase 初始化設定 ---
-    // 【請於此處填入您的 Supabase 專案 API 資訊】
-    const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cmhhdHpkeXBpd3dnbW1mYnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1MTM4NzUsImV4cCI6MjA4MTA4OTg3NX0.s6w2f3pKovuFYkR09bLvPBVJUa6b3Uw2gIXrlw9teb8';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // --- 資源路徑與卡牌總數設定 ---
+    // ==========================================
+    // 1. 全域變數與基礎設定
+    // ==========================================
     const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
     const IMG_PACK = BASE_URL + "packs/pack.png";
     const IMG_BACK = BASE_URL + "back/back.png";
 
-    // 【日後維護請改這裡】卡牌分類總數量，更新時請人手更改這兩個數值即可
     const TOTAL_COMMON = 21;
     const TOTAL_RARE = 14;
     const TOTAL_SUPER_RARE = 6;
 
     let currentUser = "";
-    let currentCollectionData = null; // 在記憶體中暫存的玩家收藏結構
+    // 預設給予空資料結構，確保離線也能正常遊玩
+    let currentCollectionData = { common: [], rare: [], super_rare: [] }; 
     let drawnCards = [];
     let isSlashing = false;
     let gameState = "login";
 
-    // --- 背景與特效 Canvas 系統 ---
+    // ==========================================
+    // 2. 獨立且優先執行的 Canvas 渲染邏輯 (防止畫面黑掉)
+    // ==========================================
     const bgCanvas = document.getElementById('bg-canvas');
     const bgCtx = bgCanvas.getContext('2d');
     const pCanvas = document.getElementById('particle-canvas');
@@ -247,6 +244,7 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
+    // 初始化粒子
     for(let i=0; i<60; i++) {
         baseParticles.push({ x: Math.random()*bgCanvas.width, y: Math.random()*bgCanvas.height, s: Math.random()*2, v: 0.5+Math.random()*1 });
     }
@@ -258,86 +256,115 @@
         });
     }
 
+    // 動畫迴圈
     function renderLoop() {
-        bgCtx.fillStyle = '#000';
-        bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-        const grad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/3, 50, bgCanvas.width/2, bgCanvas.height/3, bgCanvas.width*0.8);
-        grad.addColorStop(0, '#1a1a1a'); grad.addColorStop(1, '#000');
-        bgCtx.fillStyle = grad;
-        bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
+        try {
+            bgCtx.fillStyle = '#000';
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            const grad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/3, 50, bgCanvas.width/2, bgCanvas.height/3, bgCanvas.width*0.8);
+            grad.addColorStop(0, '#1a1a1a'); grad.addColorStop(1, '#000');
+            bgCtx.fillStyle = grad;
+            bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
 
-        bgCtx.fillStyle = 'rgba(255,255,255,0.4)';
-        baseParticles.forEach(p => {
-            p.y -= p.v;
-            if(p.y < 0) p.y = bgCanvas.height;
-            bgCtx.beginPath(); bgCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); bgCtx.fill();
-        });
-
-        if(gameState === 'drawing') {
-            flyingBacks.forEach(c => {
-                c.x += c.vx; c.y += c.vy; c.r += c.vr;
-                if(c.x < -100) c.x = bgCanvas.width+100; if(c.x > bgCanvas.width+100) c.x = -100;
-                if(c.y < -100) c.y = bgCanvas.height+100; if(c.y > bgCanvas.height+100) c.y = -100;
-                
-                bgCtx.save();
-                bgCtx.translate(c.x, c.y); bgCtx.rotate(c.r); bgCtx.globalAlpha = 0.2;
-                if(backImgObj.complete) bgCtx.drawImage(backImgObj, -50*c.s, -70*c.s, 100*c.s, 140*c.s);
-                bgCtx.restore();
+            bgCtx.fillStyle = 'rgba(255,255,255,0.4)';
+            baseParticles.forEach(p => {
+                p.y -= p.v;
+                if(p.y < 0) p.y = bgCanvas.height;
+                bgCtx.beginPath(); bgCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); bgCtx.fill();
             });
-        }
 
-        pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            if(gameState === 'drawing') {
+                flyingBacks.forEach(c => {
+                    c.x += c.vx; c.y += c.vy; c.r += c.vr;
+                    if(c.x < -100) c.x = bgCanvas.width+100; if(c.x > bgCanvas.width+100) c.x = -100;
+                    if(c.y < -100) c.y = bgCanvas.height+100; if(c.y > bgCanvas.height+100) c.y = -100;
+                    
+                    bgCtx.save();
+                    bgCtx.translate(c.x, c.y); bgCtx.rotate(c.r); bgCtx.globalAlpha = 0.2;
+                    if(backImgObj.complete) bgCtx.drawImage(backImgObj, -50*c.s, -70*c.s, 100*c.s, 140*c.s);
+                    bgCtx.restore();
+                });
+            }
 
-        if(isSlashing && slashPath.length > 1) {
-            pCtx.shadowBlur = 20;
-            pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
-            pCtx.lineWidth = 6; pCtx.lineCap = "round";
-            pCtx.beginPath(); pCtx.moveTo(slashPath[0].x, slashPath[0].y);
-            slashPath.forEach(p => pCtx.lineTo(p.x, p.y)); pCtx.stroke();
-            pCtx.shadowBlur = 0;
-        }
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
 
-        for(let i=blastParticles.length-1; i>=0; i--) {
-            let p = blastParticles[i];
-            p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-            if(p.life <= 0) { blastParticles.splice(i, 1); continue; }
-            pCtx.fillStyle = p.color;
-            pCtx.globalAlpha = p.life;
-            pCtx.beginPath();
-            pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
+            if(isSlashing && slashPath.length > 1) {
+                pCtx.shadowBlur = 20;
+                pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
+                pCtx.lineWidth = 6; pCtx.lineCap = "round";
+                pCtx.beginPath(); pCtx.moveTo(slashPath[0].x, slashPath[0].y);
+                slashPath.forEach(p => pCtx.lineTo(p.x, p.y)); pCtx.stroke();
+                pCtx.shadowBlur = 0;
+            }
+
+            for(let i=blastParticles.length-1; i>=0; i--) {
+                let p = blastParticles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+                if(p.life <= 0) { blastParticles.splice(i, 1); continue; }
+                pCtx.fillStyle = p.color;
+                pCtx.globalAlpha = p.life;
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
+            }
+            pCtx.globalAlpha = 1;
+        } catch (error) {
+            // 忽略 Canvas 偶發錯誤，防止中斷整個程式
         }
-        pCtx.globalAlpha = 1;
 
         requestAnimationFrame(renderLoop);
     }
+    // 立即啟動渲染迴圈！保證背景能動
     requestAnimationFrame(renderLoop);
 
-    // --- UI 與流程控制 ---
+
+    // ==========================================
+    // 3. Supabase 安全連線初始化
+    // ==========================================
+    const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cmhhdHpkeXBpd3dnbW1mYnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1MTM4NzUsImV4cCI6MjA4MTA4OTg3NX0.s6w2f3pKovuFYkR09bLvPBVJUa6b3Uw2gIXrlw9teb8'; 
+
+    let supabaseClient = null;
+    
+    // 使用 try-catch 包裝，避免 Key 貼錯格式導致全域崩潰
+    try {
+        if (typeof window.supabase !== 'undefined') {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            console.error("未能載入 Supabase 核心套件");
+        }
+    } catch(err) {
+        console.error("Supabase 初始化失敗 (請檢查金鑰格式):", err);
+    }
+
+
+    // ==========================================
+    // 4. UI 切換與遊戲邏輯
+    // ==========================================
     function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
 
-        // 動態切換 touch-action，解決 iOS 全局鎖定導致無法滑動的問題
         if(id === 'collection-screen') {
-            document.body.style.touchAction = 'pan-y'; // 允許原生上下滑動
+            document.body.style.touchAction = 'pan-y'; 
             updateCollectionUI();
         } else {
-            document.body.style.touchAction = 'none'; // 鎖定滑動以支援抽卡操作
+            document.body.style.touchAction = 'none'; 
         }
     }
 
-    // --- 連接 Supabase 資料庫邏輯 ---
+    // 登入驗證與資料拉取
     document.getElementById('btn-enter').onclick = async () => {
         currentUser = document.getElementById('user-select').value;
         document.getElementById('user-title').innerText = currentUser + " 的收藏";
         
         const btn = document.getElementById('btn-enter');
-        btn.innerText = "載入資料中...";
+        btn.innerText = "連線資料庫中...";
         btn.disabled = true;
 
         try {
-            // 從 Supabase 取得特定玩家資料，使用 maybeSingle 防止找不到資料時拋錯
-            const { data, error } = await supabase
+            if (!supabaseClient) throw new Error("資料庫模組未能啟動，請檢查網路連線或系統設定。");
+
+            const { data, error } = await supabaseClient
                 .from('user_collections')
                 .select('collection')
                 .eq('username', currentUser)
@@ -346,44 +373,51 @@
             if (error) throw error;
 
             if (data) {
-                // 資料存在，載入並修補可能缺少的資料結構
-                currentCollectionData = data.collection;
+                // 有紀錄，套用並修補可能缺少的屬性
+                currentCollectionData = data.collection || { common: [], rare: [], super_rare: [] };
                 if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
                 if(!currentCollectionData.rare) currentCollectionData.rare = [];
                 if(!currentCollectionData.common) currentCollectionData.common = [];
             } else {
-                // 找不到資料，觸發自動初始化 (Auto-Provisioning)
+                // 表格內無此用戶，執行初始化新增
                 currentCollectionData = { common: [], rare: [], super_rare: [] };
-                const { error: insertError } = await supabase
+                const { error: insertError } = await supabaseClient
                     .from('user_collections')
-                    .insert([{ username: currentUser, collection: currentCollectionData }]);
+                    .insert({ username: currentUser, collection: currentCollectionData });
                 if (insertError) throw insertError;
             }
 
+        } catch (err) {
+            console.error("Supabase 發生例外狀況:", err);
+            // 彈出提示，讓手機端能夠知道具體報錯
+            alert("雲端同步異常，原因：\n" + (err.message || JSON.stringify(err)) + "\n\n將自動啟用「單機離線模式」進入卡池供您測試。");
+            
+            // 離線模式重置為空資料
+            currentCollectionData = { common: [], rare: [], super_rare: [] };
+            
+        } finally {
+            // 無論連線成功或失敗，都強制解除凍結並進入遊戲
             gameState = 'drawing';
             showScreen('main-screen');
-
-        } catch (err) {
-            console.error("Supabase 載入失敗:", err);
-            alert("連接資料庫失敗，請確認 Supabase 相關設定是否正確填寫。");
-        } finally {
             btn.innerText = "進入卡池";
             btn.disabled = false;
         }
     };
 
-    // 背景更新 Supabase 資料
+    // 背景更新 Supabase 資料 (使用 Upsert 更安全)
     async function saveUserCollection() {
+        if (!supabaseClient) return;
         try {
-            await supabase
+            const { error } = await supabaseClient
                 .from('user_collections')
-                .update({ 
+                .upsert({ 
+                    username: currentUser,
                     collection: currentCollectionData, 
                     updated_at: new Date().toISOString() 
-                })
-                .eq('username', currentUser);
+                });
+            if(error) console.error("雲端同步儲存失敗:", error);
         } catch (err) {
-            console.error("Supabase 儲存失敗:", err);
+            console.error("背景儲存發生錯誤:", err);
         }
     }
 
@@ -413,14 +447,13 @@
             `;
             stage.appendChild(wrap);
             
-            // 加入機率判定：SR 0.5%, Rare 3.0%, Common 96.5%
             const rand = Math.random();
             let cardType, maxId;
             
             if (rand < 0.005) {
                 cardType = 'super_rare';
                 maxId = TOTAL_SUPER_RARE;
-            } else if (rand < 0.035) { // 0.005 + 0.03 = 0.035
+            } else if (rand < 0.035) { 
                 cardType = 'rare';
                 maxId = TOTAL_RARE;
             } else {
@@ -438,7 +471,7 @@
         }, 50);
     }
 
-    // --- 水果忍者切開偵測 ---
+    // 水果忍者切開偵測
     const uiLayer = document.getElementById('ui-layer');
     uiLayer.addEventListener('touchstart', (e) => {
         if(document.getElementById('slash-zone').classList.contains('hidden')) return;
@@ -459,7 +492,6 @@
 
     uiLayer.addEventListener('touchend', () => { isSlashing = false; slashPath = []; });
 
-    // --- 物理切開與粒子爆發 ---
     function executeCut() {
         document.getElementById('slash-zone').classList.add('hidden');
         const packs = document.querySelectorAll('.pack-wrapper');
@@ -492,7 +524,6 @@
         }
     }
 
-    // --- 卡片升起與翻牌 ---
     function showResultCard(idx) {
         const result = drawnCards[idx];
         const stage = document.getElementById('stage');
@@ -526,25 +557,20 @@
         setTimeout(() => { container.classList.add('reveal'); }, 50 * idx);
     }
 
-    // --- 翻牌及儲存邏輯 (改寫為寫入全域變數與同步 Supabase) ---
     function flipCard(el, type, id) {
-        // 如果已經翻轉過，再次點擊則觸發放大欣賞
         if(el.classList.contains('is-flipped')) {
             openFullscreen(type, id);
             return;
         }
         
-        // 第一次點擊：翻轉卡片
         el.classList.add('is-flipped');
         
-        // 更新記憶體中的收藏狀態並觸發 Supabase 背景儲存
         if(!currentCollectionData[type].includes(id)) {
             currentCollectionData[type].push(id);
-            saveUserCollection(); // 進行背景異步儲存，不阻塞 UI
+            saveUserCollection(); 
         }
     }
 
-    // --- 放大檢視 (Fullscreen Overlay) 功能 ---
     function openFullscreen(type, id) {
         const imgSrc = `${BASE_URL}cards_${type}/${id}.PNG`;
         const overlay = document.getElementById('fullscreen-overlay');
@@ -557,7 +583,7 @@
         else img.style.boxShadow = 'var(--white-glow)';
         
         overlay.classList.remove('hidden');
-        void overlay.offsetWidth; // 觸發重繪以應用 CSS transition
+        void overlay.offsetWidth; 
         overlay.classList.add('active');
     }
 
@@ -566,11 +592,10 @@
         overlay.classList.remove('active');
         setTimeout(() => {
             overlay.classList.add('hidden');
-            document.getElementById('save-hint').style.opacity = '0'; // 重置提示
+            document.getElementById('save-hint').style.opacity = '0'; 
         }, 300);
     }
 
-    // --- 實作直接下載圖片邏輯 ---
     async function downloadImage() {
         const img = document.getElementById('fullscreen-card-img');
         const imgSrc = img.src;
@@ -607,29 +632,19 @@
         }
     }
 
-    // --- 收藏圖鑑與重置 ---
     async function resetCollection() {
         if(confirm(`確定要重置 ${currentUser} 的收藏嗎？此操作無法還原並會同步至資料庫。`)) {
-            // 重置記憶體狀態
             currentCollectionData = { common: [], rare: [], super_rare: [] };
-            
-            // 立即更新 UI，確保順暢感
             updateCollectionUI(); 
-            
-            // 寫入 Supabase 資料庫
             await saveUserCollection();
         }
     }
 
     function updateCollectionUI() {
         const content = document.getElementById('collection-content');
-        
-        // 直接從目前記憶體的變數讀取資料進行渲染
         let data = currentCollectionData || { common: [], rare: [], super_rare: [] };
-        
         content.innerHTML = "";
 
-        // --- 顯示 超級稀有卡 (Super Rare) 分組 (置於最上方) ---
         const srTitle = document.createElement('div');
         srTitle.className = 'collection-group-title';
         srTitle.innerText = `超級稀有卡 (${data.super_rare.length}/${TOTAL_SUPER_RARE})`;
@@ -654,7 +669,6 @@
         }
         content.appendChild(srGrid);
 
-        // --- 顯示 稀有卡 (Rare) 分組 ---
         const rareTitle = document.createElement('div');
         rareTitle.className = 'collection-group-title';
         rareTitle.innerText = `稀有卡 (${data.rare.length}/${TOTAL_RARE})`;
@@ -679,7 +693,6 @@
         }
         content.appendChild(rareGrid);
 
-        // --- 顯示 普通卡 (Common) 分組 (置於最下方) ---
         const commonTitle = document.createElement('div');
         commonTitle.className = 'collection-group-title';
         commonTitle.innerText = `普通卡 (${data.common.length}/${TOTAL_COMMON})`;
