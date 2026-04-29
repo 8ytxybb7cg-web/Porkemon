@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porkémon TCG - 終極抽卡特效</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <style>
+        body { margin: 0; overflow-x: hidden; background-color: #111827; }
+        
+        /* God Pack 專屬彩色流光動畫 */
+        .god-pack-glow {
+            background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+            background-size: 400% 400%;
+            animation: rainbowGlow 3s ease infinite;
+            box-shadow: 0 0 80px 40px rgba(255, 255, 255, 0.5);
+            filter: blur(15px);
+        }
+        @keyframes rainbowGlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 3D 透視設定 */
+        .perspective-container {
+            perspective: 1200px;
+        }
+        .preserve-3d {
+            transform-style: preserve-3d;
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen flex items-center justify-center">
+
+    <div id="root" class="w-full h-full flex items-center justify-center relative"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { motion, useMotionValue, useTransform, AnimatePresence } = window.Motion;
+
+        // 模擬卡包圖片 (請替換為你的真實圖片路徑)
+        const PACK_IMAGE = "https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?q=80&w=400&auto=format&fit=crop"; 
+        
+        // 稀有度光芒設定
+        const GLOW_CONFIG = {
+            common: { color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.8)' },   // 藍光
+            rare: { color: '#a855f7', shadow: 'rgba(168, 85, 247, 0.9)' },     // 紫光
+            super_rare: { color: '#fbbf24', shadow: 'rgba(251, 191, 36, 1)' }, // 金光
+            god_pack: 'god-pack-glow'                                          // 特殊 Class
+        };
+
+        const App = () => {
+            const [packState, setPackState] = useState('idle'); // idle -> ripping -> opened -> cards
+            const [drawMode, setDrawMode] = useState(1); // 1 抽 或 10 抽
+            const [maxRarity, setMaxRarity] = useState('common');
+            const [cards, setCards] = useState([]);
+
+            // Framer Motion 拖拽數值追蹤
+            const dragX = useMotionValue(0);
+            
+            // 根據拖拽距離，讓光芒慢慢滲出 (從 0 到 1)
+            const seepOpacity = useTransform(dragX, [0, 150], [0, 0.8]);
+
+            // 模擬抽卡邏輯
+            const startDraw = (count) => {
+                setDrawMode(count);
+                // 這裡模擬決定最高稀有度
+                const random = Math.random();
+                let rarity = 'common';
+                if (random > 0.95) rarity = 'god_pack';
+                else if (random > 0.8) rarity = 'super_rare';
+                else if (random > 0.5) rarity = 'rare';
+                
+                setMaxRarity(rarity);
+                setPackState('ripping');
+
+                // 生成模擬卡片
+                const mockCards = Array.from({ length: count }).map((_, i) => ({
+                    id: i,
+                    bg: `hsl(${Math.random() * 360}, 70%, 60%)`
+                }));
+                setCards(mockCards);
+                
+                // 重置拖拽數值
+                dragX.set(0);
+            };
+
+            // 當滑動超過 100px，觸發撕開成功
+            const handleDragEnd = (event, info) => {
+                if (info.offset.x > 100) {
+                    setPackState('opened');
+                    // 播放砰一聲音效 (如有)
+                    // const audio = new Audio('/bang.mp3'); audio.play();
+                    
+                    // 2秒後過渡到顯示卡牌
+                    setTimeout(() => {
+                        setPackState('cards');
+                    }, 2000);
+                } else {
+                    // 滑動距離唔夠，彈返原位
+                    dragX.set(0);
+                }
+            };
+
+            // 取得光芒樣式
+            const getGlowStyle = () => {
+                if (maxRarity === 'god_pack') return {}; // God Pack 用 CSS Class 處理
+                return {
+                    backgroundColor: GLOW_CONFIG[maxRarity].color,
+                    boxShadow: `0 0 60px 30px ${GLOW_CONFIG[maxRarity].shadow}`,
+                    filter: 'blur(20px)'
+                };
+            };
+
+            return (
+                <div className="w-full max-w-2xl mx-auto p-4 flex flex-col items-center justify-center h-screen">
+                    
+                    {/* 頂部按鈕區 */}
+                    {packState === 'idle' && (
+                        <div className="flex gap-4 mb-8 z-50">
+                            <button onClick={() => startDraw(1)} className="px-6 py-2 bg-blue-600 rounded-full font-bold shadow-lg hover:bg-blue-500 transition">
+                                單抽 (1 Draw)
+                            </button>
+                            <button onClick={() => startDraw(10)} className="px-6 py-2 bg-purple-600 rounded-full font-bold shadow-lg hover:bg-purple-500 transition">
+                                十連抽 (10 Draw)
+                            </button>
+                        </div>
+                    )}
+
+                    {/* 卡包動畫區塊 */}
+                    <AnimatePresence>
+                        {(packState === 'ripping' || packState === 'opened') && (
+                            <motion.div 
+                                className="perspective-container relative w-[260px] h-[380px] preserve-3d"
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 1.2, filter: 'blur(10px)' }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                {/* 光芒層 (夾在前後包裝中間) */}
+                                <motion.div
+                                    className={`absolute top-[10%] left-1/2 -translate-x-1/2 w-4/5 h-[20%] rounded-full z-10 
+                                        ${maxRarity === 'god_pack' ? 'god-pack-glow' : ''}`}
+                                    style={maxRarity !== 'god_pack' ? {
+                                        ...getGlowStyle(),
+                                        opacity: packState === 'opened' ? 1 : seepOpacity,
+                                    } : {
+                                        opacity: packState === 'opened' ? 1 : seepOpacity,
+                                    }}
+                                    animate={packState === 'opened' ? {
+                                        scale: [1, 2.5, 3],
+                                        opacity: [0.8, 1, 0],
+                                        top: '0%'
+                                    } : {}}
+                                    transition={{ duration: 1.5, ease: "easeOut" }}
+                                />
+
+                                {/* 1. 後包裝 (Back Cover) */}
+                                <motion.div 
+                                    className="absolute inset-0 bg-gray-800 rounded-lg shadow-2xl z-0"
+                                    style={{ clipPath: 'inset(15% 0 0 0)', transformOrigin: 'bottom' }}
+                                    animate={packState === 'opened' ? { rotateX: 10 } : { rotateX: 0 }}
+                                    transition={{ type: "spring", stiffness: 100 }}
+                                />
+
+                                {/* 2. 前包裝 (Front Cover) */}
+                                <motion.div 
+                                    className="absolute inset-0 rounded-lg z-20"
+                                    style={{ 
+                                        backgroundImage: `url(${PACK_IMAGE})`,
+                                        backgroundSize: 'cover',
+                                        clipPath: 'inset(15% 0 0 0)',
+                                        transformOrigin: 'bottom'
+                                    }}
+                                    animate={packState === 'opened' ? { rotateX: -30 } : { rotateX: 0 }}
+                                    transition={{ type: "spring", stiffness: 100 }}
+                                />
+
+                                {/* 3. 頂部封條 (Top Seal - 可拖拽) */}
+                                {packState !== 'opened' && (
+                                    <div className="absolute top-0 left-0 w-full h-[15%] z-30 flex items-center justify-center">
+                                        <motion.div
+                                            className="w-full h-full cursor-grab active:cursor-grabbing rounded-t-lg"
+                                            style={{ 
+                                                backgroundImage: `url(${PACK_IMAGE})`,
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'top',
+                                                clipPath: 'inset(0 0 85% 0)',
+                                                x: dragX // 綁定拖拽數值
+                                            }}
+                                            drag="x"
+                                            dragConstraints={{ left: 0, right: 200 }}
+                                            onDragEnd={handleDragEnd}
+                                            whileDrag={{ scale: 1.05, rotateZ: 2 }} // 輕微震動感
+                                        >
+                                            {/* 提示箭頭 */}
+                                            <motion.div 
+                                                className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+                                                animate={{ x: [0, 10, 0] }}
+                                                transition={{ repeat: Infinity, duration: 1 }}
+                                            >
+                                                <span className="text-white font-bold text-sm">向右滑動撕開 ➡</span>
+                                            </motion.div>
+                                        </motion.div>
+                                    </div>
+                                )}
+                                
+                                {/* 封條飛走特效 */}
+                                {packState === 'opened' && (
+                                    <motion.div
+                                        className="absolute top-0 left-0 w-full h-full rounded-t-lg z-30 pointer-events-none"
+                                        style={{ 
+                                            backgroundImage: `url(${PACK_IMAGE})`,
+                                            backgroundSize: 'cover',
+                                            clipPath: 'inset(0 0 85% 0)'
+                                        }}
+                                        initial={{ x: 100, y: 0, rotate: 5 }}
+                                        animate={{ x: 500, y: -200, rotate: 45, opacity: 0 }}
+                                        transition={{ duration: 0.6, ease: "easeOut" }}
+                                    />
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* 卡牌展示區塊 */}
+                    {packState === 'cards' && (
+                        <motion.div 
+                            className={`w-full max-w-4xl flex justify-center ${drawMode === 10 ? 'items-center' : ''}`}
+                            initial={{ opacity: 0, y: 50 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            {drawMode === 1 ? (
+                                // 單抽佈局
+                                <div className="w-[240px] h-[340px] rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.3)]" style={{ backgroundColor: cards[0].bg }}>
+                                    <div className="w-full h-full flex items-center justify-center text-2xl font-bold bg-black/20">Card 1</div>
+                                </div>
+                            ) : (
+                                // 十連抽佈局 (3-4-3 排列)
+                                <div className="flex flex-col gap-4 items-center">
+                                    <div className="flex gap-4">
+                                        {cards.slice(0, 3).map(c => <CardMock key={c.id} color={c.bg} index={c.id} />)}
+                                    </div>
+                                    <div className="flex gap-4">
+                                        {cards.slice(3, 7).map(c => <CardMock key={c.id} color={c.bg} index={c.id} />)}
+                                    </div>
+                                    <div className="flex gap-4">
+                                        {cards.slice(7, 10).map(c => <CardMock key={c.id} color={c.bg} index={c.id} />)}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <button 
+                                onClick={() => setPackState('idle')}
+                                className="absolute bottom-10 px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200"
+                            >
+                                再次抽卡
+                            </button>
+                        </motion.div>
+                    )}
+                </div>
+            );
+        };
+
+        // 簡單的卡片 Mock 組件
+        const CardMock = ({ color, index }) => (
+            <motion.div 
+                className="w-[100px] h-[140px] rounded-md shadow-lg border border-white/20"
+                style={{ backgroundColor: color }}
+                initial={{ rotateY: 180 }}
+                animate={{ rotateY: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+            >
+                <div className="w-full h-full flex items-center justify-center font-bold text-sm bg-black/20">
+                    Card {index + 1}
+                </div>
+            </motion.div>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
