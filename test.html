@@ -2,290 +2,663 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Porkémon TCG - 終極抽卡特效</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>抽肥豬卡 - Porkémon</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { margin: 0; overflow-x: hidden; background-color: #111827; }
-        
-        /* God Pack 專屬彩色流光動畫 */
-        .god-pack-glow {
-            background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
-            background-size: 400% 400%;
-            animation: rainbowGlow 3s ease infinite;
-            box-shadow: 0 0 80px 40px rgba(255, 255, 255, 0.5);
-            filter: blur(15px);
-        }
-        @keyframes rainbowGlow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        :root {
+            --purple-glow: 0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0;
+            --gold-glow: 0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800;
+            --white-glow: 0 0 20px #ffffff, 0 0 40px #cccccc, 0 0 80px #aaaaaa;
         }
 
-        /* 3D 透視設定 */
-        .perspective-container {
-            perspective: 1200px;
+        /* God Pack 流動彩虹光暈特效 */
+        @keyframes rainbow-glow-anim {
+            0% { box-shadow: 0 0 20px #ff0000, 0 0 40px #ff7f00, 0 0 80px #ffff00; }
+            20% { box-shadow: 0 0 20px #ffff00, 0 0 40px #00ff00, 0 0 80px #0000ff; }
+            40% { box-shadow: 0 0 20px #00ff00, 0 0 40px #0000ff, 0 0 80px #4b0082; }
+            60% { box-shadow: 0 0 20px #0000ff, 0 0 40px #4b0082, 0 0 80px #9400d3; }
+            80% { box-shadow: 0 0 20px #4b0082, 0 0 40px #9400d3, 0 0 80px #ff0000; }
+            100% { box-shadow: 0 0 20px #ff0000, 0 0 40px #ff7f00, 0 0 80px #ffff00; }
         }
-        .preserve-3d {
-            transform-style: preserve-3d;
+        .rainbow-glow-anim {
+            animation: rainbow-glow-anim 1.5s linear infinite !important;
         }
+
+        /* 袋內專用強光彩虹背景動畫 */
+        @keyframes rainbow-bg-anim {
+            0% { background: rgba(255,0,0,0.8); box-shadow: 0 0 50px #ff0000; }
+            25% { background: rgba(255,255,0,0.8); box-shadow: 0 0 50px #ffff00; }
+            50% { background: rgba(0,255,0,0.8); box-shadow: 0 0 50px #00ff00; }
+            75% { background: rgba(0,0,255,0.8); box-shadow: 0 0 50px #0000ff; }
+            100% { background: rgba(255,0,0,0.8); box-shadow: 0 0 50px #ff0000; }
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%; height: 100dvh; 
+            background-color: #000; color: white;
+            font-family: "Microsoft JhengHei", sans-serif;
+            overflow: hidden; touch-action: none;
+            overscroll-behavior: none; -webkit-touch-callout: none; 
+        }
+
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 15; pointer-events: none; }
+        #ui-layer { position: relative; z-index: 10; width: 100%; height: 100%; display: flex; flex-direction: column; pointer-events: none; }
+
+        .screen { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; min-height: 0; }
+        .hidden { display: none !important; }
+
+        .select-wrapper { position: relative; margin-bottom: 50px; pointer-events: auto; display: inline-block; }
+        #user-select {
+            appearance: none; -webkit-appearance: none; background: transparent; border: none; color: white;
+            font-size: 48px; font-weight: bold; padding: 0 40px; cursor: pointer; outline: none; text-align: center; text-align-last: center; 
+        }
+        .custom-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 24px; color: #888; pointer-events: none; }
+        
+        #btn-enter { background: transparent; border: 1.5px solid #fff; color: #fff; padding: 10px 40px; font-size: 18px; cursor: pointer; pointer-events: auto; transition: opacity 0.3s; }
+        #btn-enter:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+
+        /* ====== 新增：3D 開包裝結構與動畫 ====== */
+        .pack-wrapper {
+            position: absolute; bottom: -100%; 
+            height: 70vh; aspect-ratio: 75 / 120; 
+            transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            perspective: 1000px; /* 賦予 3D 深度 */
+        }
+        .pack-wrapper.active { bottom: 15%; pointer-events: auto; }
+
+        /* 卡包各部件通用設定 */
+        .pack-part {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            backface-visibility: hidden;
+            transform-origin: bottom center; /* 預設底部為支點 */
+        }
+
+        /* 1. 頂部封條 (滑動飛走的部分) */
+        .pack-top {
+            clip-path: inset(0 0 85% 0); /* 只顯示頂部 15% */
+            z-index: 4;
+            transform-origin: left bottom;
+            transition: transform 0.1s ease-out; /* 快速跟隨手指 */
+        }
+
+        /* 2. 袋身後部 */
+        .pack-body-back {
+            clip-path: inset(14.5% 0 0 0); /* 留一點點重疊避免漏縫 */
+            z-index: 1;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.6s;
+        }
+
+        /* 3. 袋身前部 */
+        .pack-body-front {
+            clip-path: inset(14.5% 0 0 0);
+            z-index: 3;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* 4. 內部光芒 (夾在前與後之間) */
+        .pack-glow {
+            position: absolute; top: 15%; left: 5%; width: 90%; height: 80%;
+            border-radius: 10px;
+            z-index: 2;
+            opacity: 0;
+            filter: blur(25px); /* 高強度彌散光 */
+            transition: opacity 0.3s ease-out, transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-origin: center top;
+        }
+
+        /* 光芒顏色定義 */
+        .glow-blue { background: rgba(96, 165, 250, 0.85); box-shadow: 0 0 40px #60a5fa; }
+        .glow-purple { background: rgba(192, 132, 252, 0.85); box-shadow: 0 0 50px #c084fc; }
+        .glow-gold { background: rgba(251, 191, 36, 0.9); box-shadow: 0 0 60px #fbbf24; }
+        .glow-rainbow { animation: rainbow-bg-anim 1.5s linear infinite; }
+
+        /* ====== 觸發開啟後的 3D 狀態 ====== */
+        .pack-wrapper.opened .pack-top {
+            transform: translate(200%, -50%) rotate(45deg) !important;
+            opacity: 0;
+            transition: transform 0.8s cubic-bezier(0.55, 0.085, 0.68, 0.53), opacity 0.6s 0.2s !important;
+        }
+        .pack-wrapper.opened .pack-body-front {
+            transform: rotateX(-30deg) !important; /* 前袋口往外倒 */
+        }
+        .pack-wrapper.opened .pack-body-back {
+            transform: rotateX(10deg) !important; /* 後袋口微微往後仰 */
+            filter: brightness(0.6); /* 內部變暗增加深邃感 */
+        }
+        .pack-wrapper.opened .pack-glow {
+            opacity: 1 !important;
+            transform: scale(1.4) translateY(-10%) !important; /* 光芒從袋口猛烈噴發 */
+        }
+
+        /* 偵測區域 (調整為上半部) */
+        #slash-zone { position: absolute; top: 0; left: 0; width: 100%; height: 30%; z-index: 200; pointer-events: auto; }
+
+        /* 3D 翻轉卡片容器 */
+        .card-container {
+            position: absolute; width: 50vh; max-width: 280px; aspect-ratio: 63/88; 
+            perspective: 1000px; display: none; z-index: 100; opacity: 0;
+            transition: opacity 1s ease-out, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateY(100px) scale(0.8); pointer-events: auto; cursor: pointer;
+        }
+        .card-container.reveal { opacity: 1; transform: translateY(0) scale(1); }
+        
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s; transform-style: preserve-3d; }
+        .card-front, .card-back {
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden; border-radius: 12px;
+            background-size: cover; background-position: center;
+        }
+        .card-back { transform: rotateY(0deg); border: 2px solid #333; }
+        .card-front { transform: rotateY(180deg); }
+        .is-flipped { transform: rotateY(180deg); }
+
+        .bottom-nav { position: absolute; bottom: 40px; display: flex; gap: 20px; pointer-events: auto; z-index: 250; }
+        .draw-btn { background: #fff; color: #000; border: none; padding: 12px 30px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; }
+        .pill-btn { background: transparent; color: #fff; border: 2px solid #fff; border-radius: 50px; padding: 10px 30px; font-size: 18px; font-weight: bold; cursor: pointer; pointer-events: auto; }
+
+        #collection-screen { justify-content: flex-start; padding-top: 30px; overflow: hidden; box-sizing: border-box; }
+        .collection-header { padding: 10px 20px; text-align: center; width: 100%; flex-shrink: 0; pointer-events: auto; }
+        .collection-controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
+        #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: 50px; -webkit-overflow-scrolling: touch; }
+        .collection-group-title { text-align: center; font-size: 22px; font-weight: bold; margin: 20px 0 15px; color: #fff; }
+        .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
+        .card-slot { width: 100%; aspect-ratio: 63/88; background: #222; border-radius: 5px; overflow: hidden; }
+        .card-slot img { width: 100%; height: 100%; object-fit: cover; }
+
+        #fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        #fullscreen-overlay.active { opacity: 1; pointer-events: auto; }
+        #fullscreen-card-img { height: 65vh; max-height: 800px; aspect-ratio: 63/88; border-radius: 15px; object-fit: cover; -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; pointer-events: auto; }
+        .long-press-hint { color: #fff; margin-top: 15px; font-size: 18px; font-weight: bold; text-align: center; letter-spacing: 1px; }
+        #save-hint { color: #fff; margin-top: 5px; font-size: 16px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; height: 20px; }
+        .overlay-controls { margin-top: 15px; display: flex; gap: 20px; pointer-events: auto; }
     </style>
 </head>
-<body class="text-white min-h-screen flex items-center justify-center">
+<body>
 
-    <div id="root" class="w-full h-full flex items-center justify-center relative"></div>
+<canvas id="bg-canvas"></canvas>
+<canvas id="particle-canvas"></canvas> 
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { motion, useMotionValue, useTransform, AnimatePresence } = window.Motion;
+<div id="ui-layer">
+    <section id="login-screen" class="screen">
+        <div class="select-wrapper">
+            <select id="user-select">
+                <option value="Suki">Suki</option>
+                <option value="Nelson">Nelson</option>
+                <option value="爸爸">爸爸</option>
+                <option value="媽媽">媽媽</option>
+                <option value="細佬">細佬</option>
+                <option value="Rainbow">Rainbow</option>
+            </select>
+            <div class="custom-arrow">▼</div>
+        </div>
+        <button id="btn-enter">進入卡池</button>
+    </section>
 
-        // 模擬卡包圖片 (請替換為你的真實圖片路徑)
-        const PACK_IMAGE = "https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?q=80&w=400&auto=format&fit=crop"; 
-        
-        // 稀有度光芒設定
-        const GLOW_CONFIG = {
-            common: { color: '#3b82f6', shadow: 'rgba(59, 130, 246, 0.8)' },   // 藍光
-            rare: { color: '#a855f7', shadow: 'rgba(168, 85, 247, 0.9)' },     // 紫光
-            super_rare: { color: '#fbbf24', shadow: 'rgba(251, 191, 36, 1)' }, // 金光
-            god_pack: 'god-pack-glow'                                          // 特殊 Class
-        };
+    <section id="main-screen" class="screen hidden">
+        <div id="stage">
+            <div id="slash-zone" class="hidden"></div>
+        </div>
+        <div class="bottom-nav">
+            <button class="draw-btn" onclick="prepareDraw(1)">單抽</button>
+            <button class="draw-btn" onclick="prepareDraw(10)">十連抽</button>
+            <button class="draw-btn" style="background:none; color:white; border:1px solid white;" onclick="showScreen('collection-screen')">收藏</button>
+        </div>
+    </section>
 
-        const App = () => {
-            const [packState, setPackState] = useState('idle'); // idle -> ripping -> opened -> cards
-            const [drawMode, setDrawMode] = useState(1); // 1 抽 或 10 抽
-            const [maxRarity, setMaxRarity] = useState('common');
-            const [cards, setCards] = useState([]);
+    <section id="collection-screen" class="screen hidden">
+        <div class="collection-header">
+            <div class="collection-controls">
+                <button class="pill-btn" onclick="showScreen('main-screen')">返回</button>
+                <button class="pill-btn" onclick="resetCollection()">重置</button>
+            </div>
+            <h2 id="user-title" style="margin: 10px 0 0 0;"></h2>
+        </div>
+        <div id="collection-content"></div>
+    </section>
+</div>
 
-            // Framer Motion 拖拽數值追蹤
-            const dragX = useMotionValue(0);
+<div id="fullscreen-overlay" class="hidden">
+    <img id="fullscreen-card-img" src="" alt="放大卡片">
+    <div class="long-press-hint">長按圖片可進行儲存</div>
+    <div id="save-hint"></div>
+    <div class="overlay-controls">
+        <button class="pill-btn" onclick="downloadImage()">儲存</button>
+        <button class="pill-btn" onclick="closeFullscreen()">返回</button>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 1. 全域變數與基礎設定
+    // ==========================================
+    const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
+    const IMG_PACK = BASE_URL + "packs/pack.png";
+    const IMG_BACK = BASE_URL + "back/back.png";
+    const TOTAL_COMMON = 24;
+    const TOTAL_RARE = 15;
+    const TOTAL_SUPER_RARE = 7;
+
+    let currentUser = "";
+    let currentCollectionData = { common: [], rare: [], super_rare: [] }; 
+    let drawnCards = [];
+    
+    // 手勢變數
+    let isSlashing = false;
+    let startTouchX = 0;
+    let startTouchY = 0;
+    
+    let gameState = "login";
+    let isCurrentDrawGodPack = false;
+
+    // ==========================================
+    // 2. Canvas 渲染邏輯
+    // ==========================================
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    const pCanvas = document.getElementById('particle-canvas');
+    const pCtx = pCanvas.getContext('2d');
+    
+    let flyingBacks = [];
+    let baseParticles = [];
+    let blastParticles = [];
+    let slashPath = [];
+
+    const backImgObj = new Image();
+    backImgObj.src = IMG_BACK;
+    function resizeCanvas() {
+        bgCanvas.width = pCanvas.width = window.innerWidth;
+        bgCanvas.height = pCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    for(let i=0; i<60; i++) baseParticles.push({ x: Math.random()*bgCanvas.width, y: Math.random()*bgCanvas.height, s: Math.random()*2, v: 0.5+Math.random()*1 });
+    for(let i=0; i<12; i++) flyingBacks.push({ x: Math.random()*bgCanvas.width, y: Math.random()*bgCanvas.height, r: Math.random()*Math.PI*2, s: 0.3 + Math.random()*0.4, vx: (Math.random()-0.5)*1.5, vy: (Math.random()-0.5)*1.5, vr: (Math.random()-0.5)*0.03 });
+
+    function renderLoop() {
+        try {
+            bgCtx.fillStyle = '#000'; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            const grad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/3, 50, bgCanvas.width/2, bgCanvas.height/3, bgCanvas.width*0.8);
+            grad.addColorStop(0, '#1a1a1a'); grad.addColorStop(1, '#000');
+            bgCtx.fillStyle = grad; bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
+
+            bgCtx.fillStyle = 'rgba(255,255,255,0.4)';
+            baseParticles.forEach(p => { p.y -= p.v; if(p.y < 0) p.y = bgCanvas.height; bgCtx.beginPath(); bgCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); bgCtx.fill(); });
             
-            // 根據拖拽距離，讓光芒慢慢滲出 (從 0 到 1)
-            const seepOpacity = useTransform(dragX, [0, 150], [0, 0.8]);
+            if(gameState === 'drawing') {
+                flyingBacks.forEach(c => {
+                    c.x += c.vx; c.y += c.vy; c.r += c.vr;
+                    if(c.x < -100) c.x = bgCanvas.width+100; if(c.x > bgCanvas.width+100) c.x = -100;
+                    if(c.y < -100) c.y = bgCanvas.height+100; if(c.y > bgCanvas.height+100) c.y = -100;
+                    bgCtx.save(); bgCtx.translate(c.x, c.y); bgCtx.rotate(c.r); bgCtx.globalAlpha = 0.2;
+                    if(backImgObj.complete) bgCtx.drawImage(backImgObj, -50*c.s, -70*c.s, 100*c.s, 140*c.s);
+                    bgCtx.restore();
+                });
+            }
 
-            // 模擬抽卡邏輯
-            const startDraw = (count) => {
-                setDrawMode(count);
-                // 這裡模擬決定最高稀有度
-                const random = Math.random();
-                let rarity = 'common';
-                if (random > 0.95) rarity = 'god_pack';
-                else if (random > 0.8) rarity = 'super_rare';
-                else if (random > 0.5) rarity = 'rare';
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            if(isSlashing && slashPath.length > 1) {
+                pCtx.shadowBlur = 20; pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff"; pCtx.lineWidth = 6; pCtx.lineCap = "round";
+                pCtx.beginPath(); pCtx.moveTo(slashPath[0].x, slashPath[0].y);
+                slashPath.forEach(p => pCtx.lineTo(p.x, p.y)); pCtx.stroke(); pCtx.shadowBlur = 0;
+            }
+
+            for(let i=blastParticles.length-1; i>=0; i--) {
+                let p = blastParticles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+                if(p.life <= 0) { blastParticles.splice(i, 1); continue; }
+                pCtx.fillStyle = p.color; pCtx.globalAlpha = p.life;
+                pCtx.beginPath(); pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
+            }
+            pCtx.globalAlpha = 1;
+        } catch (error) {}
+        requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+
+    // ==========================================
+    // 3. Supabase 連線
+    // ==========================================
+    const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cmhhdHpkeXBpd3dnbW1mYnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1MTM4NzUsImV4cCI6MjA4MTA4OTg3NX0.s6w2f3pKovuFYkR09bLvPBVJUa6b3Uw2gIXrlw9teb8'; 
+    let supabaseClient = null;
+    try {
+        if (typeof window.supabase !== 'undefined') supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch(err) { console.error(err); }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+        if(id === 'collection-screen') { isCurrentDrawGodPack = false; document.body.style.touchAction = 'pan-y'; updateCollectionUI(); } 
+        else { document.body.style.touchAction = 'none'; }
+    }
+
+    document.getElementById('btn-enter').onclick = async () => {
+        currentUser = document.getElementById('user-select').value;
+        document.getElementById('user-title').innerText = currentUser + " 的收藏";
+        const btn = document.getElementById('btn-enter');
+        btn.innerText = "連線中..."; btn.disabled = true;
+        try {
+            if (!supabaseClient) throw new Error("無網路連線");
+            const { data, error } = await supabaseClient.from('user_collections').select('collection').eq('username', currentUser).maybeSingle();
+            if (error) throw error;
+            if (data) {
+                currentCollectionData = data.collection || { common: [], rare: [], super_rare: [] };
+                if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
+                if(!currentCollectionData.rare) currentCollectionData.rare = [];
+                if(!currentCollectionData.common) currentCollectionData.common = [];
+            } else {
+                currentCollectionData = { common: [], rare: [], super_rare: [] };
+                await supabaseClient.from('user_collections').insert({ username: currentUser, collection: currentCollectionData });
+            }
+        } catch (err) {
+            alert("雲端同步異常，啟用單機模式");
+            currentCollectionData = { common: [], rare: [], super_rare: [] };
+        } finally {
+            gameState = 'drawing'; showScreen('main-screen');
+            btn.innerText = "進入卡池"; btn.disabled = false;
+        }
+    };
+
+    async function saveUserCollection() {
+        if (!supabaseClient) return;
+        try { await supabaseClient.from('user_collections').upsert({ username: currentUser, collection: currentCollectionData, updated_at: new Date().toISOString() }); } 
+        catch (err) { console.error(err); }
+    }
+
+    // ==========================================
+    // 4. 抽卡與 3D 包裝生成
+    // ==========================================
+    function prepareDraw(num) {
+        const stage = document.getElementById('stage');
+        Array.from(stage.children).forEach(child => { if(child.id !== 'slash-zone') child.remove(); });
+        drawnCards = []; isCurrentDrawGodPack = false;
+        const zone = document.getElementById('slash-zone');
+        zone.classList.add('hidden');
+
+        if (num === 10 && Math.random() < 0.005) {
+            isCurrentDrawGodPack = true;
+            let srPool = Array.from({length: TOTAL_SUPER_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
+            srPool.sort(() => Math.random() - 0.5);
+            let selectedCards = [];
+            if (TOTAL_SUPER_RARE >= 10) { selectedCards = srPool.slice(0, 10).map(id => ({ type: 'super_rare', id: id, isGodPack: true })); } 
+            else {
+                selectedCards = srPool.map(id => ({ type: 'super_rare', id: id, isGodPack: true }));
+                let rPool = Array.from({length: TOTAL_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
+                rPool.sort(() => Math.random() - 0.5);
+                let needed = 10 - selectedCards.length;
+                let rareSelected = rPool.slice(0, needed).map(id => ({ type: 'rare', id: id, isGodPack: true }));
+                selectedCards = selectedCards.concat(rareSelected);
+            }
+            selectedCards.sort(() => Math.random() - 0.5);
+            drawnCards = selectedCards;
+        }
+
+        // 產生卡包外觀與內容設定 (包含 3D 結構與專屬光芒)
+        for(let i=0; i<num; i++) {
+            if (!isCurrentDrawGodPack) {
+                const rand = Math.random();
+                let cardType, maxId;
+                if (rand < 0.01) { cardType = 'super_rare'; maxId = TOTAL_SUPER_RARE; } 
+                else if (rand < 0.04) { cardType = 'rare'; maxId = TOTAL_RARE; } 
+                else { cardType = 'common'; maxId = TOTAL_COMMON; }
+                const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
+                drawnCards.push({type: cardType, id: cardId, isGodPack: false});
+            }
+
+            const result = drawnCards[i];
+            // 判定此包的獨立光芒顏色
+            let glowClass = 'glow-blue'; // 預設藍色 (普通)
+            if (result.isGodPack) glowClass = 'glow-rainbow';
+            else if (result.type === 'super_rare') glowClass = 'glow-gold';
+            else if (result.type === 'rare') glowClass = 'glow-purple';
+
+            const wrap = document.createElement('div');
+            wrap.className = 'pack-wrapper';
+            wrap.id = `pack-${i}`;
+            wrap.style.zIndex = 50 - i;
+            
+            let offsetX = num > 1 ? (Math.random()-0.5)*20 : 0;
+            let offsetY = num > 1 ? (Math.random()-0.5)*20 : 0;
+            wrap.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(${(Math.random()-0.5)*4}deg)`;
+            
+            // 全新 3D 結構：光芒夾在前後包裝之間
+            wrap.innerHTML = `
+                <div class="pack-glow ${glowClass}"></div>
+                <div class="pack-part pack-body-back" style="background-image:url(${IMG_PACK})"></div>
+                <div class="pack-part pack-body-front" style="background-image:url(${IMG_PACK})"></div>
+                <div class="pack-part pack-top" style="background-image:url(${IMG_PACK})"></div>
+            `;
+            stage.appendChild(wrap);
+        }
+
+        setTimeout(() => {
+            document.querySelectorAll('.pack-wrapper').forEach(p => p.classList.add('active'));
+            zone.classList.remove('hidden');
+        }, 50);
+    }
+
+    // ==========================================
+    // 5. 互動手勢：橫向撕開 (Swipe to Rip)
+    // ==========================================
+    const uiLayer = document.getElementById('ui-layer');
+    uiLayer.addEventListener('touchstart', (e) => {
+        if(document.getElementById('slash-zone').classList.contains('hidden')) return;
+        isSlashing = true; 
+        startTouchX = e.touches[0].clientX;
+        startTouchY = e.touches[0].clientY;
+        slashPath = [{x: startTouchX, y: startTouchY}];
+    });
+
+    uiLayer.addEventListener('touchmove', (e) => {
+        if(!isSlashing) return;
+        const currentX = e.touches[0].clientX; 
+        const currentY = e.touches[0].clientY;
+        slashPath.push({x: currentX, y: currentY});
+        
+        // 計算向右滑動的距離
+        let deltaX = currentX - startTouchX;
+        
+        // 限制只能往右滑，產生撕開感
+        if(deltaX > 0) {
+            let progress = Math.min(deltaX / 150, 1); // 達到 150px 視為拉滿
+            
+            document.querySelectorAll('.pack-wrapper').forEach(p => {
+                const topPart = p.querySelector('.pack-top');
+                const glowPart = p.querySelector('.pack-glow');
                 
-                setMaxRarity(rarity);
-                setPackState('ripping');
+                // 動態位移頂部與透出邊緣光
+                if(topPart) topPart.style.transform = `translateX(${deltaX}px) rotate(${progress * 5}deg)`;
+                if(glowPart) glowPart.style.opacity = progress * 0.6; // 滲光階段
+            });
 
-                // 生成模擬卡片
-                const mockCards = Array.from({ length: count }).map((_, i) => ({
-                    id: i,
-                    bg: `hsl(${Math.random() * 360}, 70%, 60%)`
-                }));
-                setCards(mockCards);
-                
-                // 重置拖拽數值
-                dragX.set(0);
-            };
+            // 若拉超過臨界值，觸發爆破！
+            if (deltaX >= 150) {
+                executeCut();
+            }
+        }
+    });
 
-            // 當滑動超過 100px，觸發撕開成功
-            const handleDragEnd = (event, info) => {
-                if (info.offset.x > 100) {
-                    setPackState('opened');
-                    // 播放砰一聲音效 (如有)
-                    // const audio = new Audio('/bang.mp3'); audio.play();
-                    
-                    // 2秒後過渡到顯示卡牌
-                    setTimeout(() => {
-                        setPackState('cards');
-                    }, 2000);
-                } else {
-                    // 滑動距離唔夠，彈返原位
-                    dragX.set(0);
-                }
-            };
+    uiLayer.addEventListener('touchend', () => { 
+        if (isSlashing) { // 滑動距離不夠就放開，彈回原位
+            document.querySelectorAll('.pack-wrapper').forEach(p => {
+                const topPart = p.querySelector('.pack-top');
+                const glowPart = p.querySelector('.pack-glow');
+                if(topPart) { topPart.style.transition = 'transform 0.3s'; topPart.style.transform = ''; }
+                if(glowPart) { glowPart.style.transition = 'opacity 0.3s'; glowPart.style.opacity = '0'; }
+                setTimeout(() => {
+                    if(topPart) topPart.style.transition = '';
+                    if(glowPart) glowPart.style.transition = '';
+                }, 300);
+            });
+        }
+        isSlashing = false; slashPath = []; 
+    });
 
-            // 取得光芒樣式
-            const getGlowStyle = () => {
-                if (maxRarity === 'god_pack') return {}; // God Pack 用 CSS Class 處理
-                return {
-                    backgroundColor: GLOW_CONFIG[maxRarity].color,
-                    boxShadow: `0 0 60px 30px ${GLOW_CONFIG[maxRarity].shadow}`,
-                    filter: 'blur(20px)'
-                };
-            };
+    function executeCut() {
+        isSlashing = false;
+        slashPath = [];
+        document.getElementById('slash-zone').classList.add('hidden');
+        const packs = document.querySelectorAll('.pack-wrapper');
+        
+        let hasSuperRare = drawnCards.some(c => c.type === 'super_rare');
+        let hasRare = drawnCards.some(c => c.type === 'rare');
+        let blastColor = '#ffffff';
+        if (isCurrentDrawGodPack) blastColor = 'rainbow'; 
+        else if (hasSuperRare) blastColor = '#fbbf24'; // 金光
+        else if (hasRare) blastColor = '#c084fc'; // 紫光
+        else blastColor = '#60a5fa'; // 藍光
+        
+        triggerBlast(blastColor);
+        
+        packs.forEach((p, idx) => {
+            // 清除 JS 注入的 inline-style，讓 CSS !important 動畫接手
+            const topPart = p.querySelector('.pack-top');
+            const glowPart = p.querySelector('.pack-glow');
+            if(topPart) topPart.style.transform = '';
+            if(glowPart) glowPart.style.opacity = '';
 
-            return (
-                <div className="w-full max-w-2xl mx-auto p-4 flex flex-col items-center justify-center h-screen">
-                    
-                    {/* 頂部按鈕區 */}
-                    {packState === 'idle' && (
-                        <div className="flex gap-4 mb-8 z-50">
-                            <button onClick={() => startDraw(1)} className="px-6 py-2 bg-blue-600 rounded-full font-bold shadow-lg hover:bg-blue-500 transition">
-                                單抽 (1 Draw)
-                            </button>
-                            <button onClick={() => startDraw(10)} className="px-6 py-2 bg-purple-600 rounded-full font-bold shadow-lg hover:bg-purple-500 transition">
-                                十連抽 (10 Draw)
-                            </button>
-                        </div>
-                    )}
+            // 觸發 3D 開啟 CSS 動畫
+            p.classList.add('opened');
+            
+            // 等待光芒爆發後，再顯示卡牌
+            setTimeout(() => { showResultCard(idx); }, 800);
+        });
+    }
 
-                    {/* 卡包動畫區塊 */}
-                    <AnimatePresence>
-                        {(packState === 'ripping' || packState === 'opened') && (
-                            <motion.div 
-                                className="perspective-container relative w-[260px] h-[380px] preserve-3d"
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 1.2, filter: 'blur(10px)' }}
-                                transition={{ duration: 0.5 }}
-                            >
-                                {/* 光芒層 (夾在前後包裝中間) */}
-                                <motion.div
-                                    className={`absolute top-[10%] left-1/2 -translate-x-1/2 w-4/5 h-[20%] rounded-full z-10 
-                                        ${maxRarity === 'god_pack' ? 'god-pack-glow' : ''}`}
-                                    style={maxRarity !== 'god_pack' ? {
-                                        ...getGlowStyle(),
-                                        opacity: packState === 'opened' ? 1 : seepOpacity,
-                                    } : {
-                                        opacity: packState === 'opened' ? 1 : seepOpacity,
-                                    }}
-                                    animate={packState === 'opened' ? {
-                                        scale: [1, 2.5, 3],
-                                        opacity: [0.8, 1, 0],
-                                        top: '0%'
-                                    } : {}}
-                                    transition={{ duration: 1.5, ease: "easeOut" }}
-                                />
+    function triggerBlast(color) {
+        const rainbowColors = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#9400d3'];
+        for(let i=0; i<80; i++) {
+            let pColor = color === 'rainbow' ? rainbowColors[Math.floor(Math.random() * rainbowColors.length)] : color;
+            blastParticles.push({
+                x: window.innerWidth/2, y: window.innerHeight * 0.4,
+                vx: (Math.random()-0.5) * 15, vy: (Math.random()-0.5) * 15,
+                s: Math.random() * 5 + 2, life: 1, color: pColor
+            });
+        }
+    }
 
-                                {/* 1. 後包裝 (Back Cover) */}
-                                <motion.div 
-                                    className="absolute inset-0 bg-gray-800 rounded-lg shadow-2xl z-0"
-                                    style={{ clipPath: 'inset(15% 0 0 0)', transformOrigin: 'bottom' }}
-                                    animate={packState === 'opened' ? { rotateX: 10 } : { rotateX: 0 }}
-                                    transition={{ type: "spring", stiffness: 100 }}
-                                />
+    // ==========================================
+    // 6. 卡牌展示邏輯
+    // ==========================================
+    function showResultCard(idx) {
+        const result = drawnCards[idx];
+        const stage = document.getElementById('stage');
+        const container = document.createElement('div');
+        container.className = 'card-container';
+        
+        if(drawnCards.length > 1) {
+            container.style.width = '25vw';
+            container.style.maxWidth = '150px';
+            const row = Math.floor(idx / 5); const col = idx % 5;
+            container.style.left = `${10 + col * 16}%`;
+            container.style.top = `${20 + row * 30}%`;
+        }
 
-                                {/* 2. 前包裝 (Front Cover) */}
-                                <motion.div 
-                                    className="absolute inset-0 rounded-lg z-20"
-                                    style={{ 
-                                        backgroundImage: `url(${PACK_IMAGE})`,
-                                        backgroundSize: 'cover',
-                                        clipPath: 'inset(15% 0 0 0)',
-                                        transformOrigin: 'bottom'
-                                    }}
-                                    animate={packState === 'opened' ? { rotateX: -30 } : { rotateX: 0 }}
-                                    transition={{ type: "spring", stiffness: 100 }}
-                                />
+        let cardBackClass = "card-back";
+        let cardBackStyle = `background-image:url('${IMG_BACK}');`;
+        
+        if (result.isGodPack) {
+            cardBackClass += " rainbow-glow-anim";
+        } else {
+            let glow = 'var(--white-glow)';
+            if (result.type === 'super_rare') glow = 'var(--gold-glow)'; // 統一為金色
+            else if (result.type === 'rare') glow = 'var(--purple-glow)';
+            cardBackStyle += ` box-shadow:${glow};`;
+        }
+        
+        const frontImgSrc = `${BASE_URL}cards_${result.type}/${result.id}.PNG`;
+        container.innerHTML = `
+            <div class="card-inner" onclick="flipCard(this, '${result.type}', '${result.id}')">
+                <div class="${cardBackClass}" style="${cardBackStyle}"></div>
+                <div class="card-front" style="background-image:url('${frontImgSrc}')"></div>
+            </div>
+        `;
+        stage.appendChild(container);
+        
+        container.style.display = 'block';
+        setTimeout(() => { container.classList.add('reveal'); }, 50 * idx);
+    }
 
-                                {/* 3. 頂部封條 (Top Seal - 可拖拽) */}
-                                {packState !== 'opened' && (
-                                    <div className="absolute top-0 left-0 w-full h-[15%] z-30 flex items-center justify-center">
-                                        <motion.div
-                                            className="w-full h-full cursor-grab active:cursor-grabbing rounded-t-lg"
-                                            style={{ 
-                                                backgroundImage: `url(${PACK_IMAGE})`,
-                                                backgroundSize: 'cover',
-                                                backgroundPosition: 'top',
-                                                clipPath: 'inset(0 0 85% 0)',
-                                                x: dragX // 綁定拖拽數值
-                                            }}
-                                            drag="x"
-                                            dragConstraints={{ left: 0, right: 200 }}
-                                            onDragEnd={handleDragEnd}
-                                            whileDrag={{ scale: 1.05, rotateZ: 2 }} // 輕微震動感
-                                        >
-                                            {/* 提示箭頭 */}
-                                            <motion.div 
-                                                className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm"
-                                                animate={{ x: [0, 10, 0] }}
-                                                transition={{ repeat: Infinity, duration: 1 }}
-                                            >
-                                                <span className="text-white font-bold text-sm">向右滑動撕開 ➡</span>
-                                            </motion.div>
-                                        </motion.div>
-                                    </div>
-                                )}
-                                
-                                {/* 封條飛走特效 */}
-                                {packState === 'opened' && (
-                                    <motion.div
-                                        className="absolute top-0 left-0 w-full h-full rounded-t-lg z-30 pointer-events-none"
-                                        style={{ 
-                                            backgroundImage: `url(${PACK_IMAGE})`,
-                                            backgroundSize: 'cover',
-                                            clipPath: 'inset(0 0 85% 0)'
-                                        }}
-                                        initial={{ x: 100, y: 0, rotate: 5 }}
-                                        animate={{ x: 500, y: -200, rotate: 45, opacity: 0 }}
-                                        transition={{ duration: 0.6, ease: "easeOut" }}
-                                    />
-                                )}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+    function flipCard(el, type, id) {
+        if(el.classList.contains('is-flipped')) { openFullscreen(type, id); return; }
+        el.classList.add('is-flipped');
+        if(!currentCollectionData[type].includes(id)) {
+            currentCollectionData[type].push(id);
+            saveUserCollection();
+        }
+    }
 
-                    {/* 卡牌展示區塊 */}
-                    {packState === 'cards' && (
-                        <motion.div 
-                            className={`w-full max-w-4xl flex justify-center ${drawMode === 10 ? 'items-center' : ''}`}
-                            initial={{ opacity: 0, y: 50 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                        >
-                            {drawMode === 1 ? (
-                                // 單抽佈局
-                                <div className="w-[240px] h-[340px] rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.3)]" style={{ backgroundColor: cards[0].bg }}>
-                                    <div className="w-full h-full flex items-center justify-center text-2xl font-bold bg-black/20">Card 1</div>
-                                </div>
-                            ) : (
-                                // 十連抽佈局 (3-4-3 排列)
-                                <div className="flex flex-col gap-4 items-center">
-                                    <div className="flex gap-4">
-                                        {cards.slice(0, 3).map(c => <CardMock key={c.id} color={c.bg} index={c.id} />)}
-                                    </div>
-                                    <div className="flex gap-4">
-                                        {cards.slice(3, 7).map(c => <CardMock key={c.id} color={c.bg} index={c.id} />)}
-                                    </div>
-                                    <div className="flex gap-4">
-                                        {cards.slice(7, 10).map(c => <CardMock key={c.id} color={c.bg} index={c.id} />)}
-                                    </div>
-                                </div>
-                            )}
-                            
-                            <button 
-                                onClick={() => setPackState('idle')}
-                                className="absolute bottom-10 px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-gray-200"
-                            >
-                                再次抽卡
-                            </button>
-                        </motion.div>
-                    )}
-                </div>
-            );
+    function openFullscreen(type, id) {
+        const imgSrc = `${BASE_URL}cards_${type}/${id}.PNG`;
+        const overlay = document.getElementById('fullscreen-overlay');
+        const img = document.getElementById('fullscreen-card-img');
+        img.src = imgSrc;
+        if (isCurrentDrawGodPack) { img.className = 'rainbow-glow-anim'; img.style.boxShadow = 'none'; } 
+        else {
+            img.className = '';
+            if (type === 'super_rare') img.style.boxShadow = 'var(--gold-glow)';
+            else if (type === 'rare') img.style.boxShadow = 'var(--purple-glow)';
+            else img.style.boxShadow = 'var(--white-glow)';
+        }
+        overlay.classList.remove('hidden'); void overlay.offsetWidth; overlay.classList.add('active');
+    }
+
+    function closeFullscreen() {
+        const overlay = document.getElementById('fullscreen-overlay');
+        overlay.classList.remove('active');
+        setTimeout(() => { overlay.classList.add('hidden'); document.getElementById('save-hint').style.opacity = '0'; }, 300);
+    }
+
+    async function downloadImage() {
+        const img = document.getElementById('fullscreen-card-img');
+        const imgSrc = img.src; const hint = document.getElementById('save-hint');
+        try {
+            hint.innerText = "下載中..."; hint.style.opacity = '1';
+            const response = await fetch(imgSrc); const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.style.display = 'none'; a.href = url;
+            a.download = 'Porkemon_' + (imgSrc.split('/').pop() || 'card.png');
+            document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a);
+            hint.innerText = "下載完成！"; setTimeout(() => hint.style.opacity = '0', 2000);
+        } catch (error) { hint.innerText = "下載失敗，請長按圖片儲存"; setTimeout(() => hint.style.opacity = '0', 3000); }
+    }
+
+    async function resetCollection() {
+        if(confirm(`確定要重置 ${currentUser} 的收藏嗎？此操作無法還原。`)) {
+            currentCollectionData = { common: [], rare: [], super_rare: [] };
+            updateCollectionUI(); await saveUserCollection();
+        }
+    }
+
+    function updateCollectionUI() {
+        const content = document.getElementById('collection-content');
+        let data = currentCollectionData || { common: [], rare: [], super_rare: [] };
+        content.innerHTML = "";
+
+        const createSection = (titleText, key, maxId, path) => {
+            const title = document.createElement('div'); title.className = 'collection-group-title'; title.innerText = `${titleText} (${data[key].length}/${maxId})`; content.appendChild(title);
+            const grid = document.createElement('div'); grid.className = 'collection-grid';
+            for(let i=1; i<=maxId; i++) {
+                const id = i.toString().padStart(3, '0'); const isOwned = data[key].includes(id);
+                const slot = document.createElement('div'); slot.className = 'card-slot';
+                slot.innerHTML = `<img src="${isOwned ? `${BASE_URL}${path}/${id}.PNG` : IMG_BACK}">`;
+                if(isOwned) { slot.onclick = () => openFullscreen(key, id); slot.style.cursor = 'pointer'; }
+                grid.appendChild(slot);
+            }
+            content.appendChild(grid);
         };
 
-        // 簡單的卡片 Mock 組件
-        const CardMock = ({ color, index }) => (
-            <motion.div 
-                className="w-[100px] h-[140px] rounded-md shadow-lg border border-white/20"
-                style={{ backgroundColor: color }}
-                initial={{ rotateY: 180 }}
-                animate={{ rotateY: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-            >
-                <div className="w-full h-full flex items-center justify-center font-bold text-sm bg-black/20">
-                    Card {index + 1}
-                </div>
-            </motion.div>
-        );
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+        createSection('超級稀有卡', 'super_rare', TOTAL_SUPER_RARE, 'cards_super_rare');
+        createSection('稀有卡', 'rare', TOTAL_RARE, 'cards_rare');
+        createSection('普通卡', 'common', TOTAL_COMMON, 'cards_common');
+    }
+</script>
 </body>
 </html>
