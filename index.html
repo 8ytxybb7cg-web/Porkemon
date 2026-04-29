@@ -233,7 +233,7 @@
     const IMG_PACK = BASE_URL + "packs/pack.png";
     const IMG_BACK = BASE_URL + "back/back.png";
     const TOTAL_COMMON = 27;
-    const TOTAL_RARE = 15;
+    const TOTAL_RARE = 16;
     const TOTAL_SUPER_RARE = 7;
 
     let currentUser = "";
@@ -449,7 +449,7 @@
         const zone = document.getElementById('slash-zone');
         zone.classList.add('hidden');
 
-        if (num === 10 && Math.random() < 0.005) {
+        if (num === 10 && Math.random() < 1) {
             isCurrentDrawGodPack = true;
             let srPool = Array.from({length: TOTAL_SUPER_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
             srPool.sort(() => Math.random() - 0.5); 
