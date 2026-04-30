@@ -64,11 +64,12 @@
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-size: cover; background-position: center; background-repeat: no-repeat;
+            will-change: transform, opacity;
         }
         /* 頂部 15% 切割 */
         .split-top { 
             clip-path: polygon(0 0, 100% 0, 100% 15%, 0 15%); 
-            z-index: 4; will-change: transform; transform-origin: left bottom;
+            z-index: 4; transform-origin: left bottom;
         }
         /* 底部 85% 切割 */
         .split-bottom { 
@@ -82,43 +83,41 @@
         .pack-wrapper[data-highest-rarity="super_rare"] { --glow-base: #fbbf24; }
         .pack-wrapper[data-highest-rarity="god_pack"] { --glow-base: #ffffff; }
 
-        /* 滲光效果 (Dragging) */
-        .glow-leak {
-            position: absolute; top: 15%; left: 0; width: 100%; height: 6px;
-            z-index: 3; opacity: 0; pointer-events: none;
-            mix-blend-mode: screen; filter: blur(6px);
-            background: var(--glow-base); box-shadow: 0 0 20px 10px var(--glow-base);
-            transform-origin: left center; will-change: transform, opacity;
+        /* 橫跨式撕條 (Tear Strip) */
+        .tear-strip {
+            position: absolute; top: calc(15% - 4px); left: 0; width: 100%; height: 8px;
+            background: rgba(150, 29, 20, 0.85);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            z-index: 6; pointer-events: none;
+            will-change: transform, opacity; transform-origin: left center;
         }
 
-        /* 中心強烈光芒噴發 (Burst) */
+        /* 方向性放射光束 (God Rays Burst) */
         .glow-burst {
-            position: absolute; top: 15%; left: 50%; width: 250%; height: 250%;
-            transform: translate(-50%, -100%) scale(0); transform-origin: center bottom;
-            z-index: 5; opacity: 0; pointer-events: none;
-            mix-blend-mode: screen; filter: blur(20px);
-            background: radial-gradient(circle at center bottom, var(--glow-base) 0%, transparent 60%);
+            position: absolute; bottom: 85%; left: 50%; width: 350%; height: 350%;
+            transform: translate(-50%, 0) scaleY(0.1) scaleX(0.2); transform-origin: center bottom;
+            z-index: 2; opacity: 0; pointer-events: none;
+            mix-blend-mode: screen; filter: blur(8px);
+            /* 多角度漸變形成交錯的光束 */
+            background: 
+                linear-gradient(75deg, transparent 40%, var(--glow-base) 46%, white 50%, var(--glow-base) 54%, transparent 60%),
+                linear-gradient(105deg, transparent 40%, var(--glow-base) 46%, white 50%, var(--glow-base) 54%, transparent 60%),
+                linear-gradient(90deg, transparent 45%, var(--glow-base) 48%, white 50%, var(--glow-base) 52%, transparent 55%);
+            -webkit-mask-image: linear-gradient(to top, black 0%, transparent 80%);
+            mask-image: linear-gradient(to top, black 0%, transparent 80%);
         }
+        
         .glow-burst.sr-burst { animation: sr-breath 1s ease-in-out infinite alternate; }
         .glow-burst.god-pack-burst {
-            background: conic-gradient(from 0deg at 50% 100%, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
-            animation: god-burst-spin 2s linear infinite;
-            -webkit-mask-image: radial-gradient(circle at center bottom, black 0%, transparent 60%);
-            mask-image: radial-gradient(circle at center bottom, black 0%, transparent 60%);
+            background: 
+                linear-gradient(75deg, transparent 40%, #ff00ff 46%, white 50%, #00ffff 54%, transparent 60%),
+                linear-gradient(105deg, transparent 40%, #00ff00 46%, white 50%, #ffff00 54%, transparent 60%),
+                linear-gradient(90deg, transparent 45%, #ff0000 48%, white 50%, #ff0000 52%, transparent 55%);
+            animation: god-ray-spin 2s linear infinite;
         }
 
-        /* 紅色視覺引導線 */
-        .red-guide {
-            position: absolute; top: calc(15% - 2px); left: -15px; width: 45px; height: 4px;
-            background: #ef4444; box-shadow: 0 0 10px #ef4444, 0 0 5px white; border-radius: 2px;
-            z-index: 6; pointer-events: none;
-            animation: breath-red 1.5s infinite alternate;
-            will-change: transform; transform-origin: left center;
-        }
-
-        @keyframes sr-breath { from { filter: blur(15px) brightness(1); } to { filter: blur(25px) brightness(1.4); } }
-        @keyframes god-burst-spin { 0% { filter: hue-rotate(0deg) blur(20px); } 100% { filter: hue-rotate(360deg) blur(20px); } }
-        @keyframes breath-red { from { opacity: 0.5; box-shadow: 0 0 8px #ef4444; } to { opacity: 1; box-shadow: 0 0 15px #ef4444, 0 0 8px white; } }
+        @keyframes sr-breath { from { filter: blur(8px) brightness(1); } to { filter: blur(15px) brightness(1.4); } }
+        @keyframes god-ray-spin { 0% { filter: blur(8px) hue-rotate(0deg); } 100% { filter: blur(8px) hue-rotate(360deg); } }
         /* ==================================== */
 
         .card-container {
@@ -420,13 +419,15 @@
 
             let burstClass = highestRarity === 'god_pack' ? 'glow-burst god-pack-burst' : (highestRarity === 'super_rare' ? 'glow-burst sr-burst' : 'glow-burst');
 
-            // 全新 3D 切割與光效渲染層
+            // 只有最上層 (i === 0) 才會加入撕條 (Tear Strip)
+            let tearStripHTML = (i === 0) ? `<div class="tear-strip"></div>` : '';
+
+            // 全新 3D 切割與光束渲染層
             wrap.innerHTML = `
                 <div class="pack-half split-bottom" style="background-image:url(${IMG_PACK})"></div>
                 <div class="glow-burst ${burstClass.replace('glow-burst ', '')}"></div>
-                <div class="glow-leak"></div>
                 <div class="pack-half split-top" style="background-image:url(${IMG_PACK})"></div>
-                <div class="red-guide"></div>
+                ${tearStripHTML}
             `;
             stage.appendChild(wrap);
         }
@@ -438,7 +439,7 @@
     }
 
     // ==========================================
-    // 5. 阻尼彈性互動 (模擬 framer-motion 手感)
+    // 5. 阻尼彈性互動 (模擬物理手感)
     // ==========================================
     let dragStartX = 0;
     let dragCurrentX = 0;
@@ -506,45 +507,48 @@
 
     function applySealTransform(x) {
         const tops = document.querySelectorAll('.split-top');
-        const guides = document.querySelectorAll('.red-guide');
-        const leaks = document.querySelectorAll('.glow-leak');
-        let progress = Math.min(x / (window.innerWidth * 0.35), 1);
+        const strips = document.querySelectorAll('.tear-strip');
         
         tops.forEach(el => el.style.transform = `translate3d(${x}px, ${x * 0.15}px, 0) rotate(${x * 0.03}deg)`);
-        guides.forEach(el => el.style.transform = `translate3d(${x}px, ${x * 0.15}px, 0) rotate(${x * 0.03}deg)`);
-        leaks.forEach(el => {
-            el.style.opacity = progress;
-            el.style.transform = `scaleX(${1 + progress * 0.2})`;
-        });
+        strips.forEach(el => el.style.transform = `translate3d(${x}px, ${x * 0.15}px, 0) rotate(${x * 0.03}deg)`);
     }
 
     function executeSnapCut() {
         gameState = 'opening';
         const tops = document.querySelectorAll('.split-top');
-        const guides = document.querySelectorAll('.red-guide');
+        const strips = document.querySelectorAll('.tear-strip');
         const bursts = document.querySelectorAll('.glow-burst');
-        const leaks = document.querySelectorAll('.glow-leak');
+        const bottoms = document.querySelectorAll('.split-bottom');
         
-        // 1. 關閉滲光
-        leaks.forEach(el => el.style.opacity = '0');
-        guides.forEach(el => { el.style.transition = 'opacity 0.2s'; el.style.opacity = '0'; });
-
-        // 2. 封條加速飛走
+        // 1. 封條與撕條加速飛走並完全消失 (無殘留)
         tops.forEach(el => {
             el.style.transition = 'transform 0.6s cubic-bezier(0.55, 0.085, 0.68, 0.53), opacity 0.5s 0.1s';
             el.style.transform = `translate3d(${window.innerWidth + 100}px, -100px, 0) rotate(120deg)`;
             el.style.opacity = '0';
         });
+        strips.forEach(el => {
+            el.style.transition = 'transform 0.6s cubic-bezier(0.55, 0.085, 0.68, 0.53), opacity 0.4s';
+            el.style.transform = `translate3d(${window.innerWidth + 100}px, -100px, 0) rotate(120deg)`;
+            el.style.opacity = '0';
+        });
 
-        // 3. 中心扇形光束強烈噴發
+        // 2. 底層卡包向下退走沉降
+        bottoms.forEach(el => {
+            el.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.8s ease-out';
+            el.style.transform = 'translateY(60%)'; 
+            el.style.opacity = '0';
+        });
+
+        // 3. 中心光束向上強烈噴發 (面積逐漸擴大)
         if(isCurrentDrawGodPack) {
             document.getElementById('god-pack-bg').classList.remove('hidden');
             document.getElementById('god-pack-glow').classList.remove('hidden');
         }
         bursts.forEach(el => {
-            el.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s';
+            el.style.transition = 'transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s';
             el.style.opacity = '1';
-            el.style.transform = 'translate(-50%, -100%) scale(1.5)'; 
+            // Scale 動畫營造出光束向上射出且越來越大的空間感
+            el.style.transform = 'translate(-50%, 0) scaleY(1) scaleX(1)'; 
         });
 
         // 補償粒子的環境渲染
@@ -558,11 +562,6 @@
         // 4. 卡牌緩步升起
         setTimeout(() => {
             document.querySelectorAll('.pack-wrapper').forEach((p, idx) => {
-                const bottom = p.querySelector('.split-bottom');
-                if(bottom) {
-                    bottom.style.transition = 'opacity 0.5s ease-out';
-                    bottom.style.opacity = '0';
-                }
                 setTimeout(() => showResultCard(idx), 300);
             });
             
