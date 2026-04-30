@@ -120,7 +120,15 @@
             backface-visibility: hidden; border-radius: 12px;
             background-size: cover; background-position: center;
         }
-        .card-back { transform: rotateY(0deg); border: 2px solid #333; }
+                .card-back { 
+            transform: rotateY(0deg); 
+            border: none; /* 移除邊框避免干擾光暈位置 */
+            background-size: 100% 100%; /* 強制圖片拉伸至完全符合容器尺寸 */
+            background-repeat: no-repeat;
+            border-radius: 12px; /* 確保圓角與光暈路徑一致 */
+            overflow: hidden;
+        }
+
         .card-front { transform: rotateY(180deg); }
         .is-flipped { transform: rotateY(180deg); }
 
@@ -155,9 +163,11 @@
         }
         #fullscreen-overlay.active { opacity: 1; pointer-events: auto; }
         
-        #fullscreen-card-img {
-            height: 65vh; max-height: 800px; aspect-ratio: 63/88;
-            border-radius: 15px; object-fit: cover;
+                #fullscreen-card-img {
+            height: 65vh;
+            max-height: 800px; aspect-ratio: 63/88;
+            border-radius: 12px; /* 統一圓角半徑 */
+            object-fit: fill; /* 強制圖片填滿，確保邊緣與 box-shadow 完全重合 */
             -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; pointer-events: auto;
         }
 
@@ -232,7 +242,7 @@
     const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
     const IMG_PACK = BASE_URL + "packs/pack.png";
     const IMG_BACK = BASE_URL + "back/back.png";
-    const TOTAL_COMMON = 28;
+    const TOTAL_COMMON = 27;
     const TOTAL_RARE = 16;
     const TOTAL_SUPER_RARE = 7;
 
@@ -603,15 +613,16 @@
         container.style.setProperty('--ty', ty);
         container.style.setProperty('--tscale', tscale);
 
-        let cardBackStyle = `background-image:url('${IMG_BACK}');`;
+                // 加入 background-size: 100% 100% 確保動態生成的 element 也能強行配合
+        let cardBackStyle = `background-image:url('${IMG_BACK}'); background-size: 100% 100%;`;
         
         if (result.isGodPack) {
-            cardBackStyle += ` box-shadow: var(--platinum-glow);`;
+            cardBackStyle += ` box-shadow: var(--platinum-glow); border-radius: 12px;`;
         } else {
-            let glow = 'var(--blue-glow)'; // 預設普通
+            let glow = 'var(--blue-glow)';
             if (result.type === 'super_rare') glow = 'var(--gold-glow)';
             else if (result.type === 'rare') glow = 'var(--purple-glow)';
-            cardBackStyle += ` box-shadow:${glow};`;
+            cardBackStyle += ` box-shadow: ${glow}; border-radius: 12px;`;
         }
         
         const frontImgSrc = `${BASE_URL}cards_${result.type}/${result.id}.PNG`;
