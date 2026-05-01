@@ -7,191 +7,163 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            /* 更新光環顏色定義 */
-            --blue-glow: 0 0 20px #0055ff, 0 0 40px #00aaff, 0 0 80px #88ddff; /* 普通 */
-            --purple-glow: 0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0; /* 稀有 */
-            --gold-glow: 0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800; /* 超級稀有 */
-            --platinum-glow: 0 0 20px #ffffff, 0 0 40px #e5e4e2, 0 0 80px #fffafa, 0 0 100px #ffffff; /* God Pack 白金 */
+            --blue-glow:     0 0 20px #0055ff, 0 0 40px #00aaff, 0 0 80px #88ddff;
+            --purple-glow:   0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0;
+            --gold-glow:     0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800;
+            --platinum-glow: 0 0 20px #ffffff, 0 0 40px #e5e4e2, 0 0 80px #fffafa, 0 0 100px #ffffff;
         }
-
         body, html {
-            margin: 0; padding: 0; width: 100%; 
-            height: 100%; height: 100dvh; 
-            background-color: #000; color: white;
-            font-family: "Microsoft JhengHei", sans-serif;
-            overflow: hidden; touch-action: none;
-            overscroll-behavior: none; 
-            -webkit-touch-callout: none; 
+            margin:0; padding:0; width:100%;
+            height:100%; height:100dvh;
+            background-color:#000; color:white;
+            font-family:"Microsoft JhengHei", sans-serif;
+            overflow:hidden; touch-action:none;
+            overscroll-behavior:none;
+            -webkit-touch-callout:none;
         }
+        #bg-canvas      { position:fixed; top:0; left:0; width:100%; height:100%; z-index:1; }
+        #particle-canvas{ position:fixed; top:0; left:0; width:100%; height:100%; z-index:15; pointer-events:none; }
+        /* Glow beam canvas: above packs (z50), below cards (z100) */
+        #glow-canvas    { position:fixed; top:0; left:0; width:100%; height:100%; z-index:60; pointer-events:none; }
+        #ui-layer       { position:relative; z-index:10; width:100%; height:100%; display:flex; flex-direction:column; pointer-events:none; }
 
-        /* 背景與 UI 層次 */
-        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        #particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 15; pointer-events: none; }
-        #ui-layer { position: relative; z-index: 10; width: 100%; height: 100%; display: flex; flex-direction: column; pointer-events: none; }
+        .screen { flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; width:100%; height:100%; min-height:0; position:relative; }
+        .hidden { display:none !important; }
 
-        .screen { 
-            flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            width: 100%; height: 100%; min-height: 0; position: relative;
-        }
-        .hidden { display: none !important; }
-
-        /* God Pack 專屬彩虹背景特效 */
+        /* God Pack */
         #god-pack-bg {
-            position: absolute; top: 50%; left: 50%;
-            width: 250vw; height: 250vh;
-            transform: translate(-50%, -50%);
-            background: conic-gradient(from 0deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
-            animation: spin-rainbow 4s linear infinite;
-            opacity: 0.6;
-            z-index: -2; /* 置於 main-screen 內層最底部 */
-            pointer-events: none;
+            position:absolute; top:50%; left:50%; width:250vw; height:250vh;
+            transform:translate(-50%,-50%);
+            background:conic-gradient(from 0deg,#ff0000,#ff7f00,#ffff00,#00ff00,#0000ff,#4b0082,#9400d3,#ff0000);
+            animation:spin-rainbow 4s linear infinite; opacity:0.6; z-index:-2; pointer-events:none;
         }
         #god-pack-glow {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 65%);
-            z-index: -1;
-            pointer-events: none;
-            animation: pulse-glow 2s ease-in-out infinite alternate;
+            position:absolute; top:0; left:0; width:100%; height:100%;
+            background:radial-gradient(circle at center,rgba(255,255,255,0.9) 0%,rgba(255,255,255,0) 65%);
+            z-index:-1; pointer-events:none; animation:pulse-glow 2s ease-in-out infinite alternate;
         }
-        @keyframes spin-rainbow {
-            from { transform: translate(-50%, -50%) rotate(0deg); }
-            to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        @keyframes pulse-glow {
-            from { opacity: 0.5; }
-            to { opacity: 1; }
-        }
+        @keyframes spin-rainbow { from{transform:translate(-50%,-50%) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg)} }
+        @keyframes pulse-glow   { from{opacity:0.5} to{opacity:1} }
 
-        /* 身份選擇 */
-        .select-wrapper { position: relative; margin-bottom: 50px; pointer-events: auto; display: inline-block; }
+        /* Login */
+        .select-wrapper { position:relative; margin-bottom:50px; pointer-events:auto; display:inline-block; }
         #user-select {
-            appearance: none; -webkit-appearance: none; background: transparent; border: none; color: white;
-            font-size: 48px; font-weight: bold; 
-            padding: 0 40px; cursor: pointer; outline: none;
-            text-align: center; text-align-last: center; 
+            appearance:none; -webkit-appearance:none; background:transparent; border:none; color:white;
+            font-size:48px; font-weight:bold; padding:0 40px; cursor:pointer; outline:none;
+            text-align:center; text-align-last:center;
         }
-        .custom-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 24px; color: #888; pointer-events: none; }
-        
-        #btn-enter { background: transparent; border: 1.5px solid #fff; color: #fff; padding: 10px 40px; font-size: 18px; cursor: pointer; pointer-events: auto; transition: opacity 0.3s; }
-        #btn-enter:disabled { opacity: 0.5; cursor: not-allowed; }
+        .custom-arrow { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:24px; color:#888; pointer-events:none; }
+        #btn-enter { background:transparent; border:1.5px solid #fff; color:#fff; padding:10px 40px; font-size:18px; cursor:pointer; pointer-events:auto; transition:opacity 0.3s; }
+        #btn-enter:disabled { opacity:0.5; cursor:not-allowed; }
 
-        /* 抽卡舞台 */
-        #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: auto; }
+        /* Stage */
+        #stage { position:relative; width:100%; height:100%; display:flex; justify-content:center; align-items:center; pointer-events:auto; }
 
-        /* 切開動畫與包裝容器 */
+        /* Pack wrapper */
         .pack-wrapper {
-            position: absolute; bottom: -100%; 
-            height: 70vh; aspect-ratio: 75 / 120; 
-            transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none;
+            position:absolute; bottom:-100%;
+            height:70vh; aspect-ratio:75/120;
+            transition:bottom 1s cubic-bezier(0.175,0.885,0.32,1.275);
+            pointer-events:none; overflow:visible;
         }
-        .pack-wrapper.active { bottom: 15%; pointer-events: auto; }
-        
-        .pack-half {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-size: cover; background-position: center; background-repeat: no-repeat;
-            transition: transform 0.8s ease-in, opacity 0.8s ease-in;
+        .pack-wrapper.active { bottom:15%; pointer-events:auto; }
+
+        /* Pack image layer */
+        .pack-img {
+            position:absolute; top:0; left:0; width:100%; height:100%;
+            background-size:cover; background-position:center; background-repeat:no-repeat;
+            border-radius:8px;
         }
-        .split-left { clip-path: polygon(0 0, 100% 0, 0 100%); }
-        .split-right { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
 
-        /* 偵測區域 */
-        #slash-zone { position: absolute; top: 0; left: 15%; width: 70%; height: 35%; z-index: 200; pointer-events: auto; }
+        /* ── TEAR STRIP ────────────────────────────────────────
+           Sits at the top 15% of the pack.
+           Left edge protrudes ~6px beyond the pack (the "nub").
+           Width spans full pack width + that overhang.
+           85% opacity of #961D14.
+           ──────────────────────────────────────────────────── */
+        .tear-strip {
+            position:absolute;
+            top:0;
+            left:-6px;                    /* nub protrusion */
+            width:calc(100% + 6px);
+            height:15%;
+            background:rgba(150,29,20,0.85);  /* #961D14 @ 85% */
+            border-radius:3px 3px 0 0;
+            z-index:10;
+            cursor:grab;
+            touch-action:none;
+            will-change:transform;
+            transform-origin:left center;
+            box-shadow:-4px 0 0 0 rgba(255,80,60,0.6); /* left-nub highlight */
+        }
+        /* Perforation dots along the bottom edge */
+        .tear-strip::after {
+            content:'';
+            position:absolute; bottom:0; left:0; right:0; height:2px;
+            background:repeating-linear-gradient(90deg,
+                rgba(255,255,255,0.45) 0px, rgba(255,255,255,0.45) 5px,
+                transparent 5px, transparent 11px);
+        }
 
-        /* 3D 翻轉卡片容器 */
+        /* Cards */
         .card-container {
-            position: absolute; width: 50vh; max-width: 280px; 
-            aspect-ratio: 63/88; /* 確保容器響應式維持 63:88 比例 */
-            perspective: 1000px; display: none; z-index: 100; opacity: 0;
-            transition: opacity 1s ease-out, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translate(-50%, calc(-50% + 100px)) scale(0.5); /* 初始位置與縮放 */
-            transform-origin: center center;
-            pointer-events: auto; cursor: pointer;
+            position:absolute; width:50vh; max-width:280px;
+            aspect-ratio:63/88; perspective:1000px;
+            display:none; z-index:100; opacity:0;
+            transition:opacity 1s ease-out, transform 1s cubic-bezier(0.175,0.885,0.32,1.275);
+            transform:translate(-50%,calc(-50% + 100px)) scale(0.5);
+            transform-origin:center center; pointer-events:auto; cursor:pointer;
         }
-        .card-container.reveal { 
-            opacity: 1; transform: translate(var(--tx, -50%), var(--ty, -50%)) scale(var(--tscale, 1));
+        .card-container.reveal { opacity:1; transform:translate(var(--tx,-50%),var(--ty,-50%)) scale(var(--tscale,1)); }
+        .card-inner { position:relative; width:100%; height:100%; transition:transform 0.8s; transform-style:preserve-3d; }
+        .card-front,.card-back {
+            position:absolute; width:100%; height:100%;
+            backface-visibility:hidden; border-radius:12px;
+            background-size:100% 100%; background-repeat:no-repeat; background-position:center;
         }
-        
-        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s; transform-style: preserve-3d; }
-        
-        /* 卡牌正反面：強制拉伸填滿 63:88 容器 */
-        .card-front, .card-back {
-            position: absolute; width: 100%; height: 100%;
-            backface-visibility: hidden; border-radius: 12px;
-            background-size: 100% 100%; /* 強制圖片拉伸至完全符合容器尺寸 */
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        
-        .card-back { 
-            transform: rotateY(0deg);
-            border: none; /* 移除邊框避免干擾光暈位置 */
-            border-radius: 12px; /* 確保圓角與光暈路徑一致 */
-            overflow: hidden;
-        }
+        .card-back  { transform:rotateY(0deg);   border-radius:12px; overflow:hidden; }
+        .card-front { transform:rotateY(180deg); }
+        .is-flipped { transform:rotateY(180deg); }
 
-        .card-front { transform: rotateY(180deg); }
-        .is-flipped { transform: rotateY(180deg); }
+        /* Navigation */
+        .bottom-nav { position:absolute; bottom:40px; display:flex; gap:20px; pointer-events:auto; z-index:250; }
+        .draw-btn   { background:#fff; color:#000; border:none; padding:12px 30px; font-size:18px; font-weight:bold; border-radius:50px; cursor:pointer; }
+        .pill-btn   { background:transparent; color:#fff; border:2px solid #fff; border-radius:50px; padding:10px 30px; font-size:18px; font-weight:bold; cursor:pointer; pointer-events:auto; }
 
-        /* 底部導航 & 共用 Pill 形按鈕 */
-        .bottom-nav { position: absolute; bottom: 40px; display: flex; gap: 20px; pointer-events: auto; z-index: 250; }
-        .draw-btn { background: #fff; color: #000; border: none; padding: 12px 30px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; }
-        
-        .pill-btn {
-            background: transparent; color: #fff; border: 2px solid #fff; border-radius: 50px;
-            padding: 10px 30px; font-size: 18px; font-weight: bold; cursor: pointer; pointer-events: auto;
-        }
+        /* Collection */
+        #collection-screen { justify-content:flex-start; padding-top:30px; overflow:hidden; box-sizing:border-box; }
+        .collection-header  { padding:10px 20px; text-align:center; width:100%; flex-shrink:0; pointer-events:auto; }
+        .collection-controls{ display:flex; justify-content:center; gap:15px; margin-bottom:15px; }
+        #collection-content { flex:1; width:100%; max-width:600px; overflow-y:auto; pointer-events:auto; padding-bottom:50px; -webkit-overflow-scrolling:touch; }
+        .collection-group-title { text-align:center; font-size:22px; font-weight:bold; margin:20px 0 15px; color:#fff; }
+        .collection-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:0 20px; }
+        .card-slot { width:100%; aspect-ratio:63/88; background:#222; border-radius:5px; overflow:hidden; }
+        .card-slot img { width:100%; height:100%; object-fit:fill; }
 
-        /* 收藏頁面 */
-        #collection-screen { justify-content: flex-start; padding-top: 30px; overflow: hidden; box-sizing: border-box; }
-        .collection-header { padding: 10px 20px; text-align: center; width: 100%; flex-shrink: 0; pointer-events: auto; }
-        .collection-controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
-        
-        #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: 50px; -webkit-overflow-scrolling: touch; }
-        
-        .collection-group-title { text-align: center; font-size: 22px; font-weight: bold; margin: 20px 0 15px; color: #fff; }
-        .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
-        
-        /* 收藏卡槽：強制維持 63:88，圖片強制變形填滿 */
-        .card-slot { 
-            width: 100%;
-            aspect-ratio: 63/88; 
-            background: #222; border-radius: 5px; overflow: hidden; 
-        }
-        .card-slot img { 
-            width: 100%;
-            height: 100%; 
-            object-fit: fill; /* 強制變形填滿留白空間，不裁切不縮小 */
-        }
-
-        /* 全螢幕放大預覽 */
+        /* Fullscreen */
         #fullscreen-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.85); z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+            position:fixed; top:0; left:0; width:100%; height:100%;
+            background-color:rgba(0,0,0,0.85); z-index:9999;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            opacity:0; transition:opacity 0.3s ease; pointer-events:none;
         }
-        #fullscreen-overlay.active { opacity: 1; pointer-events: auto; }
-        
+        #fullscreen-overlay.active { opacity:1; pointer-events:auto; }
         #fullscreen-card-img {
-            height: 65vh;
-            max-height: 800px; 
-            aspect-ratio: 63/88; /* 確保維持 63:88 比例 */
-            border-radius: 12px; /* 統一圓角半徑 */
-            object-fit: fill; /* 強制圖片填滿，確保邊緣與 box-shadow 完全重合 */
-            -webkit-user-select: auto; user-select: auto;
-            -webkit-touch-callout: default; pointer-events: auto;
+            height:65vh; max-height:800px; aspect-ratio:63/88;
+            border-radius:12px; object-fit:fill;
+            -webkit-user-select:auto; user-select:auto;
+            -webkit-touch-callout:default; pointer-events:auto;
         }
-
-        .long-press-hint { color: #fff; margin-top: 15px; font-size: 18px; font-weight: bold; text-align: center; letter-spacing: 1px; }
-        #save-hint { color: #fff; margin-top: 5px; font-size: 16px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; height: 20px; }
-        .overlay-controls { margin-top: 15px; display: flex; gap: 20px; pointer-events: auto; }
+        .long-press-hint { color:#fff; margin-top:15px; font-size:18px; font-weight:bold; text-align:center; letter-spacing:1px; }
+        #save-hint { color:#fff; margin-top:5px; font-size:16px; font-weight:bold; opacity:0; transition:opacity 0.3s ease; height:20px; }
+        .overlay-controls { margin-top:15px; display:flex; gap:20px; pointer-events:auto; }
     </style>
 </head>
 <body>
 
 <canvas id="bg-canvas"></canvas>
-<canvas id="particle-canvas"></canvas> 
+<canvas id="particle-canvas"></canvas>
+<canvas id="glow-canvas"></canvas>
 
 <div id="ui-layer">
     <section id="login-screen" class="screen">
@@ -212,15 +184,11 @@
     <section id="main-screen" class="screen hidden">
         <div id="god-pack-bg" class="hidden"></div>
         <div id="god-pack-glow" class="hidden"></div>
-        
-        <div id="stage" onclick="flipAllRemaining()">
-            <div id="slash-zone" class="hidden"></div>
-        </div>
-        
+        <div id="stage" onclick="flipAllRemaining()"></div>
         <div class="bottom-nav hidden" id="action-buttons">
             <button class="draw-btn" onclick="prepareDraw(1)">單抽</button>
             <button class="draw-btn" onclick="prepareDraw(10)">十連抽</button>
-            <button class="draw-btn" style="background:none; color:white; border:1px solid white;" onclick="showScreen('collection-screen')">收藏</button>
+            <button class="draw-btn" style="background:none;color:white;border:1px solid white;" onclick="showScreen('collection-screen')">收藏</button>
         </div>
     </section>
 
@@ -230,7 +198,7 @@
                 <button class="pill-btn" onclick="showScreen('main-screen')">返回</button>
                 <button class="pill-btn" onclick="resetCollection()">重置</button>
             </div>
-            <h2 id="user-title" style="margin: 10px 0 0 0;"></h2>
+            <h2 id="user-title" style="margin:10px 0 0 0;"></h2>
         </div>
         <div id="collection-content"></div>
     </section>
@@ -247,602 +215,616 @@
 </div>
 
 <script>
-    // ==========================================
-    // 1. 全域變數與基礎設定
-    // ==========================================
-    const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
-    const IMG_PACK = BASE_URL + "packs/pack.png";
-    const IMG_BACK = BASE_URL + "back/back.png";
-    const TOTAL_COMMON = 28;
-    const TOTAL_RARE = 16;
-    const TOTAL_SUPER_RARE = 7;
+/* ============================================================
+   GLOBALS
+   ============================================================ */
+const BASE_URL         = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
+const IMG_PACK         = BASE_URL + "packs/pack.png";
+const IMG_BACK         = BASE_URL + "back/back.png";
+const TOTAL_COMMON     = 28;
+const TOTAL_RARE       = 16;
+const TOTAL_SUPER_RARE = 9;
 
-    let currentUser = "";
-    let currentCollectionData = { common: [], rare: [], super_rare: [] }; 
-    let drawnCards = [];
-    let flippedCount = 0; // 用於追蹤當前翻開的卡牌數量
-    let isSlashing = false;
-    let gameState = "login";
-    let isCurrentDrawGodPack = false;
+let currentUser           = "";
+let currentCollectionData = { common:[], rare:[], super_rare:[] };
+let drawnCards            = [];
+let flippedCount          = 0;
+let gameState             = "login";
+let isCurrentDrawGodPack  = false;
 
-    // ==========================================
-    // 2. 獨立且優先執行的 Canvas 渲染邏輯
-    // ==========================================
-    const bgCanvas = document.getElementById('bg-canvas');
-    const bgCtx = bgCanvas.getContext('2d');
-    const pCanvas = document.getElementById('particle-canvas');
-    const pCtx = pCanvas.getContext('2d');
-    
-    let flyingBacks = [];
-    let baseParticles = [];
-    let blastParticles = [];
-    let slashPath = [];
+/* Tear strip state */
+let tearDragActive  = false;
+let tearDragX       = 0;
+let tearDragStartX  = 0;
+let tearFullyTorn   = false;
+let tearStripEl     = null;
 
-    const backImgObj = new Image();
-    backImgObj.src = IMG_BACK;
+/* ============================================================
+   CANVAS REFS
+   ============================================================ */
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx    = bgCanvas.getContext('2d');
+const pCanvas  = document.getElementById('particle-canvas');
+const pCtx     = pCanvas.getContext('2d');
+const glCanvas = document.getElementById('glow-canvas');
+const glCtx    = glCanvas.getContext('2d');
 
-    function resizeCanvas() {
-        bgCanvas.width = pCanvas.width = window.innerWidth;
-        bgCanvas.height = pCanvas.height = window.innerHeight;
+let flyingBacks    = [];
+let baseParticles  = [];
+let blastParticles = [];
+
+/* Glow system state */
+let glowPhase  = 'off';  // 'off' | 'burst' | 'hold' | 'fade'
+let glowT      = 0;
+let glowInfo   = null;   // { beams[], blur, type }
+let glowBeams  = [];
+
+const backImgObj = new Image();
+backImgObj.src = IMG_BACK;
+
+function resizeCanvas() {
+    bgCanvas.width = pCanvas.width = glCanvas.width = window.innerWidth;
+    bgCanvas.height= pCanvas.height= glCanvas.height= window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+for (let i=0;i<60;i++) baseParticles.push({x:Math.random()*bgCanvas.width,y:Math.random()*bgCanvas.height,s:Math.random()*2,v:0.5+Math.random()});
+for (let i=0;i<12;i++) flyingBacks.push({x:Math.random()*bgCanvas.width,y:Math.random()*bgCanvas.height,r:Math.random()*Math.PI*2,s:0.3+Math.random()*0.4,vx:(Math.random()-0.5)*1.5,vy:(Math.random()-0.5)*1.5,vr:(Math.random()-0.5)*0.03});
+
+/* ============================================================
+   GLOW BEAM CONFIG PER RARITY
+   ============================================================ */
+const RARITY_GLOW_CFG = {
+    common:     { colors:['#60a5fa','#93c5fd','#bfdbfe'], blur:22, type:'electric', beamCount:7  },
+    rare:       { colors:['#c084fc','#a855f7','#e9d5ff'], blur:28, type:'inner',    beamCount:8  },
+    super_rare: { colors:['#fbbf24','#f59e0b','#fde68a'], blur:30, type:'breathe',  beamCount:9  },
+    god_pack:   { colors:['#ff0000','#ff7f00','#ffff00','#00ff00','#0000ff','#c084fc'], blur:35, type:'rainbow', beamCount:14 }
+};
+
+function easeOut(t){ return 1-Math.pow(1-t,3); }
+
+/* hue-rotate a hex colour by `deg` degrees */
+function hueRotate(hex, deg) {
+    let r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
+    let max=Math.max(r,g,b),min=Math.min(r,g,b),h,s,l=(max+min)/2;
+    if(max===min){h=s=0;}else{
+        let d=max-min;s=l>0.5?d/(2-max-min):d/(max+min);
+        switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;case b:h=(r-g)/d+4;break;}h/=6;
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    h=(h+deg/360)%1; if(h<0)h+=1;
+    let q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;
+    function hue2rgb(p,q,t){if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<0.5)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;}
+    r=hue2rgb(p,q,h+1/3);g=hue2rgb(p,q,h);b=hue2rgb(p,q,h-1/3);
+    return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
+}
 
-    for(let i=0; i<60; i++) {
-        baseParticles.push({ x: Math.random()*bgCanvas.width, y: Math.random()*bgCanvas.height, s: Math.random()*2, v: 0.5+Math.random()*1 });
-    }
-    for(let i=0; i<12; i++) {
-        flyingBacks.push({
-            x: Math.random()*bgCanvas.width, y: Math.random()*bgCanvas.height,
-            r: Math.random()*Math.PI*2, s: 0.3 + Math.random()*0.4,
-            vx: (Math.random()-0.5)*1.5, vy: (Math.random()-0.5)*1.5, vr: (Math.random()-0.5)*0.03
+function startGlowBurst(rarityKey) {
+    const cfg   = RARITY_GLOW_CFG[rarityKey];
+    glowInfo    = cfg;
+    glowPhase   = 'burst';
+    glowT       = 0;
+    glowBeams   = [];
+
+    const cx = glCanvas.width  / 2;
+    const cy = glCanvas.height * 0.52;   // roughly where bag opening is
+
+    for (let i=0; i<cfg.beamCount; i++) {
+        /* Fan upward: center straight up ± ~65° spread */
+        const angle  = -Math.PI/2 + (Math.random()-0.5) * (Math.PI * 0.72);
+        const colorI = i % cfg.colors.length;
+        glowBeams.push({
+            angle,
+            width    : 8 + Math.random()*16,
+            length   : 0,
+            maxLen   : glCanvas.height * (0.45 + Math.random()*0.55),
+            color    : cfg.colors[colorI],
+            phase    : Math.random()*Math.PI*2   // for breathe / rainbow
         });
     }
+}
 
-    function renderLoop() {
-        try {
-            bgCtx.fillStyle = '#000';
-            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-            const grad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height/3, 50, bgCanvas.width/2, bgCanvas.height/3, bgCanvas.width*0.8);
-            grad.addColorStop(0, '#1a1a1a'); grad.addColorStop(1, '#000');
-            bgCtx.fillStyle = grad;
-            bgCtx.fillRect(0,0, bgCanvas.width, bgCanvas.height);
+function renderGlowCanvas(dt) {
+    glCtx.clearRect(0,0,glCanvas.width,glCanvas.height);
+    if (glowPhase === 'off' || !glowInfo) return;
 
-            bgCtx.fillStyle = 'rgba(255,255,255,0.4)';
-            baseParticles.forEach(p => {
-                p.y -= p.v;
-                if(p.y < 0) p.y = bgCanvas.height;
-                bgCtx.beginPath(); bgCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); bgCtx.fill();
-            });
+    glowT += dt;
 
-            if(gameState === 'drawing') {
-                flyingBacks.forEach(c => {
-                    c.x += c.vx; c.y += c.vy; c.r += c.vr;
-                    if(c.x < -100) c.x = bgCanvas.width+100; if(c.x > bgCanvas.width+100) c.x = -100;
-                    if(c.y < -100) c.y = bgCanvas.height+100; if(c.y > bgCanvas.height+100) c.y = -100;
-                    
-                    bgCtx.save();
-                    bgCtx.translate(c.x, c.y); bgCtx.rotate(c.r); bgCtx.globalAlpha = 0.2;
-                    if(backImgObj.complete) bgCtx.drawImage(backImgObj, -50*c.s, -70*c.s, 100*c.s, 140*c.s);
-                    bgCtx.restore();
-                });
-            }
+    /* Phase transitions */
+    if      (glowPhase==='burst' && glowT > 600) { glowPhase='hold'; glowT=0; }
+    else if (glowPhase==='hold'  && glowT > 1600){ glowPhase='fade'; glowT=0; }
+    else if (glowPhase==='fade'  && glowT > 900) { glowPhase='off';  glowBeams=[]; return; }
 
-            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+    const progress = glowPhase==='burst' ? Math.min(glowT/600,1) : 1;
+    const alpha    = glowPhase==='fade'  ? 1 - glowT/900 : 1;
+    const cx = glCanvas.width /2;
+    const cy = glCanvas.height*0.52;
 
-            if(isSlashing && slashPath.length > 1) {
-                pCtx.shadowBlur = 20;
-                pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
-                pCtx.lineWidth = 6; pCtx.lineCap = "round";
-                pCtx.beginPath(); pCtx.moveTo(slashPath[0].x, slashPath[0].y);
-                slashPath.forEach(p => pCtx.lineTo(p.x, p.y)); pCtx.stroke();
-                pCtx.shadowBlur = 0;
-            }
+    glCtx.save();
+    glCtx.globalCompositeOperation = 'screen';   /* additive blend → translucent energy */
+    glCtx.globalAlpha = alpha;
 
-            for(let i=blastParticles.length-1; i>=0; i--) {
-                let p = blastParticles[i];
-                p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-                if(p.life <= 0) { blastParticles.splice(i, 1); continue; }
-                pCtx.fillStyle = p.color;
-                pCtx.globalAlpha = p.life;
-                pCtx.beginPath();
-                pCtx.arc(p.x, p.y, p.s, 0, Math.PI*2); pCtx.fill();
-            }
-            pCtx.globalAlpha = 1;
-        } catch (error) {}
+    glowBeams.forEach((b,i) => {
+        /* Grow during burst */
+        b.length = b.maxLen * easeOut(progress);
 
-        requestAnimationFrame(renderLoop);
-    }
-    requestAnimationFrame(renderLoop);
+        /* Expand width slightly during hold */
+        let wMult = 1;
+        if (glowPhase==='hold') wMult = 1 + (glowT/1600)*0.4;
 
-    // ==========================================
-    // 3. Supabase 安全連線初始化
-    // ==========================================
-    const SUPABASE_URL = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cmhhdHpkeXBpd3dnbW1mYnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1MTM4NzUsImV4cCI6MjA4MTA4OTg3NX0.s6w2f3pKovuFYkR09bLvPBVJUa6b3Uw2gIXrlw9teb8'; 
+        /* Colour transforms */
+        let color = b.color;
+        if (glowInfo.type==='rainbow') {
+            color = hueRotate(b.color, (glowT/15 + i*26) % 360);
+        }
 
-    let supabaseClient = null;
+        /* Breathe for SR gold */
+        const breathe = glowInfo.type==='breathe'
+            ? 0.70 + 0.30*Math.sin(glowT/350 + b.phase)
+            : 1;
+
+        const ex = cx + Math.cos(b.angle)*b.length;
+        const ey = cy + Math.sin(b.angle)*b.length;
+
+        /* ── Soft beam (blurred) ── */
+        glCtx.save();
+        glCtx.filter = `blur(${glowInfo.blur * 0.55}px)`;
+        const grad = glCtx.createLinearGradient(cx,cy,ex,ey);
+        grad.addColorStop(0,   color);
+        grad.addColorStop(0.55,color);
+        grad.addColorStop(1,   'rgba(0,0,0,0)');
+        glCtx.strokeStyle = grad;
+        glCtx.lineWidth   = b.width * wMult * breathe;
+        glCtx.lineCap     = 'round';
+        glCtx.beginPath(); glCtx.moveTo(cx,cy); glCtx.lineTo(ex,ey); glCtx.stroke();
+        glCtx.restore();
+
+        /* ── Bright core (no blur) ── */
+        const cGrad = glCtx.createLinearGradient(cx,cy,ex,ey);
+        cGrad.addColorStop(0,   '#ffffff');
+        cGrad.addColorStop(0.25, color);
+        cGrad.addColorStop(1,   'rgba(0,0,0,0)');
+        glCtx.strokeStyle = cGrad;
+        glCtx.lineWidth   = b.width * 0.22 * breathe;
+        glCtx.lineCap     = 'round';
+        glCtx.beginPath(); glCtx.moveTo(cx,cy); glCtx.lineTo(ex,ey); glCtx.stroke();
+    });
+
+    glCtx.restore();
+}
+
+/* ============================================================
+   MAIN RENDER LOOP
+   ============================================================ */
+let lastTS = 0;
+function renderLoop(ts) {
+    const dt = ts - lastTS; lastTS = ts;
     try {
-        if (typeof window.supabase !== 'undefined') {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } else {
-            console.error("未能載入 Supabase 核心套件");
+        /* BG */
+        bgCtx.fillStyle='#000'; bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height);
+        const grad=bgCtx.createRadialGradient(bgCanvas.width/2,bgCanvas.height/3,50,bgCanvas.width/2,bgCanvas.height/3,bgCanvas.width*0.8);
+        grad.addColorStop(0,'#1a1a1a'); grad.addColorStop(1,'#000');
+        bgCtx.fillStyle=grad; bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height);
+
+        bgCtx.fillStyle='rgba(255,255,255,0.4)';
+        baseParticles.forEach(p=>{p.y-=p.v;if(p.y<0)p.y=bgCanvas.height;bgCtx.beginPath();bgCtx.arc(p.x,p.y,p.s,0,Math.PI*2);bgCtx.fill();});
+
+        if(gameState==='drawing'){
+            flyingBacks.forEach(c=>{
+                c.x+=c.vx;c.y+=c.vy;c.r+=c.vr;
+                if(c.x<-100)c.x=bgCanvas.width+100;if(c.x>bgCanvas.width+100)c.x=-100;
+                if(c.y<-100)c.y=bgCanvas.height+100;if(c.y>bgCanvas.height+100)c.y=-100;
+                bgCtx.save();bgCtx.translate(c.x,c.y);bgCtx.rotate(c.r);bgCtx.globalAlpha=0.2;
+                if(backImgObj.complete)bgCtx.drawImage(backImgObj,-50*c.s,-70*c.s,100*c.s,140*c.s);
+                bgCtx.restore();
+            });
         }
-    } catch(err) {
-        console.error("Supabase 初始化失敗:", err);
-    }
 
-    // ==========================================
-    // 4. UI 切換與遊戲邏輯
-    // ==========================================
-    function showScreen(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
-
-        if(id === 'collection-screen') {
-            isCurrentDrawGodPack = false;
-            document.getElementById('god-pack-bg').classList.add('hidden');
-            document.getElementById('god-pack-glow').classList.add('hidden');
-            document.body.style.touchAction = 'pan-y'; 
-            updateCollectionUI();
-            document.getElementById('action-buttons').classList.remove('hidden');
-        } else if (id === 'main-screen' && drawnCards.length === 0) {
-            // 如果剛進入卡池畫面且尚未抽卡，確保顯示選單
-            document.getElementById('action-buttons').classList.remove('hidden');
-            document.body.style.touchAction = 'none';
-        } else {
-            document.body.style.touchAction = 'none';
+        /* Particles */
+        pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+        for(let i=blastParticles.length-1;i>=0;i--){
+            let p=blastParticles[i];p.x+=p.vx;p.y+=p.vy;p.life-=0.02;
+            if(p.life<=0){blastParticles.splice(i,1);continue;}
+            pCtx.fillStyle=p.color;pCtx.globalAlpha=p.life;pCtx.beginPath();pCtx.arc(p.x,p.y,p.s,0,Math.PI*2);pCtx.fill();
         }
-    }
+        pCtx.globalAlpha=1;
 
-    document.getElementById('btn-enter').onclick = async () => {
-        currentUser = document.getElementById('user-select').value;
-        document.getElementById('user-title').innerText = currentUser + " 的收藏";
-        
-        const btn = document.getElementById('btn-enter');
-        btn.innerText = "連線資料庫中...";
-        btn.disabled = true;
+        /* Glow beams */
+        renderGlowCanvas(dt);
 
-        try {
-            if (!supabaseClient) throw new Error("資料庫模組未能啟動。");
+    } catch(e){}
+    requestAnimationFrame(renderLoop);
+}
+requestAnimationFrame(renderLoop);
 
-            const { data, error } = await supabaseClient
-                .from('user_collections')
-                .select('collection')
-                .eq('username', currentUser)
-                .maybeSingle();
+/* ============================================================
+   SUPABASE
+   ============================================================ */
+const SUPABASE_URL      = 'https://myrhatzdypiwwgmmfbuw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15cmhhdHpkeXBpd3dnbW1mYnV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1MTM4NzUsImV4cCI6MjA4MTA4OTg3NX0.s6w2f3pKovuFYkR09bLvPBVJUa6b3Uw2gIXrlw9teb8';
+let supabaseClient=null;
+try{if(typeof window.supabase!=='undefined')supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){console.error(e);}
 
-            if (error) throw error;
-
-            if (data) {
-                currentCollectionData = data.collection || { common: [], rare: [], super_rare: [] };
-                if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
-                if(!currentCollectionData.rare) currentCollectionData.rare = [];
-                if(!currentCollectionData.common) currentCollectionData.common = [];
-            } else {
-                currentCollectionData = { common: [], rare: [], super_rare: [] };
-                const { error: insertError } = await supabaseClient
-                    .from('user_collections')
-                    .insert({ username: currentUser, collection: currentCollectionData });
-                if (insertError) throw insertError;
-            }
-        } catch (err) {
-            console.error("Supabase 發生例外狀況:", err);
-            alert("雲端同步異常，原因：\n" + (err.message || JSON.stringify(err)) + "\n\n將自動啟用「單機離線模式」。");
-            currentCollectionData = { common: [], rare: [], super_rare: [] };
-        } finally {
-            gameState = 'drawing';
-            showScreen('main-screen');
-            btn.innerText = "進入卡池";
-            btn.disabled = false;
-        }
-    };
-
-    async function saveUserCollection() {
-        if (!supabaseClient) return;
-        try {
-            await supabaseClient
-                .from('user_collections')
-                .upsert({ 
-                    username: currentUser,
-                    collection: currentCollectionData, 
-                    updated_at: new Date().toISOString() 
-                });
-        } catch (err) {
-            console.error("背景儲存發生錯誤:", err);
-        }
-    }
-
-    function prepareDraw(num) {
-        // 隱藏選單防止誤觸
-        document.getElementById('action-buttons').classList.add('hidden');
-
-        const stage = document.getElementById('stage');
-        Array.from(stage.children).forEach(child => {
-            if(child.id !== 'slash-zone') child.remove();
-        });
-
-        drawnCards = [];
-        flippedCount = 0;
-        isCurrentDrawGodPack = false;
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    if(id==='collection-screen'){
+        isCurrentDrawGodPack=false;
         document.getElementById('god-pack-bg').classList.add('hidden');
         document.getElementById('god-pack-glow').classList.add('hidden');
-        
-        const zone = document.getElementById('slash-zone');
-        zone.classList.add('hidden');
+        document.body.style.touchAction='pan-y';
+        updateCollectionUI();
+        document.getElementById('action-buttons').classList.remove('hidden');
+    } else if(id==='main-screen'&&drawnCards.length===0){
+        document.getElementById('action-buttons').classList.remove('hidden');
+        document.body.style.touchAction='none';
+    } else {
+        document.body.style.touchAction='none';
+    }
+}
 
-        if (num === 10 && Math.random() < 0.005) {
-            isCurrentDrawGodPack = true;
-            let srPool = Array.from({length: TOTAL_SUPER_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
-            srPool.sort(() => Math.random() - 0.5);
-            
-            let selectedCards = [];
-            if (TOTAL_SUPER_RARE >= 10) {
-                selectedCards = srPool.slice(0, 10).map(id => ({ type: 'super_rare', id: id, isGodPack: true }));
-            } else {
-                selectedCards = srPool.map(id => ({ type: 'super_rare', id: id, isGodPack: true }));
-                let rPool = Array.from({length: TOTAL_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
-                rPool.sort(() => Math.random() - 0.5);
-                let needed = 10 - selectedCards.length;
-                let rareSelected = rPool.slice(0, needed).map(id => ({ type: 'rare', id: id, isGodPack: true }));
-                selectedCards = selectedCards.concat(rareSelected);
-            }
-            selectedCards.sort(() => Math.random() - 0.5);
-            drawnCards = selectedCards;
+document.getElementById('btn-enter').onclick = async () => {
+    currentUser=document.getElementById('user-select').value;
+    document.getElementById('user-title').innerText=currentUser+" 的收藏";
+    const btn=document.getElementById('btn-enter');
+    btn.innerText="連線資料庫中...";btn.disabled=true;
+    try{
+        if(!supabaseClient) throw new Error("資料庫模組未能啟動。");
+        const{data,error}=await supabaseClient.from('user_collections').select('collection').eq('username',currentUser).maybeSingle();
+        if(error) throw error;
+        if(data){
+            currentCollectionData=data.collection||{common:[],rare:[],super_rare:[]};
+            if(!currentCollectionData.super_rare)currentCollectionData.super_rare=[];
+            if(!currentCollectionData.rare)currentCollectionData.rare=[];
+            if(!currentCollectionData.common)currentCollectionData.common=[];
+        }else{
+            currentCollectionData={common:[],rare:[],super_rare:[]};
+            const{error:ie}=await supabaseClient.from('user_collections').insert({username:currentUser,collection:currentCollectionData});
+            if(ie) throw ie;
         }
+    }catch(err){
+        console.error(err);
+        alert("雲端同步異常，原因：\n"+(err.message||JSON.stringify(err))+"\n\n將自動啟用「單機離線模式」。");
+        currentCollectionData={common:[],rare:[],super_rare:[]};
+    }finally{
+        gameState='drawing';showScreen('main-screen');btn.innerText="進入卡池";btn.disabled=false;
+    }
+};
 
-        for(let i=0; i<num; i++) {
-            const wrap = document.createElement('div');
-            wrap.className = 'pack-wrapper';
-            wrap.id = `pack-${i}`;
-            wrap.style.zIndex = 50 - i;
-            
-            let offsetX = num > 1 ? (Math.random()-0.5)*20 : 0;
-            let offsetY = num > 1 ? (Math.random()-0.5)*20 : 0;
-            wrap.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(${(Math.random()-0.5)*4}deg)`;
-            
-            wrap.innerHTML = `
-                <div class="pack-half split-left" style="background-image:url(${IMG_PACK})"></div>
-                <div class="pack-half split-right" style="background-image:url(${IMG_PACK})"></div>
-            `;
-            stage.appendChild(wrap);
-            
-            if (!isCurrentDrawGodPack) {
-                const rand = Math.random();
-                let cardType, maxId;
-                
-                if (rand < 0.01) {
-                    cardType = 'super_rare';
-                    maxId = TOTAL_SUPER_RARE;
-                } else if (rand < 0.04) { 
-                    cardType = 'rare';
-                    maxId = TOTAL_RARE;
-                } else {
-                    cardType = 'common';
-                    maxId = TOTAL_COMMON;
-                }
-                
-                const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
-                drawnCards.push({type: cardType, id: cardId, isGodPack: false});
-            }
+async function saveUserCollection(){
+    if(!supabaseClient)return;
+    try{await supabaseClient.from('user_collections').upsert({username:currentUser,collection:currentCollectionData,updated_at:new Date().toISOString()});}
+    catch(e){console.error(e);}
+}
+
+/* ============================================================
+   PREPARE DRAW
+   ============================================================ */
+function prepareDraw(num) {
+    document.getElementById('action-buttons').classList.add('hidden');
+
+    /* Clear stage */
+    const stage=document.getElementById('stage');
+    Array.from(stage.children).forEach(c=>c.remove());
+
+    drawnCards=[]; flippedCount=0;
+    tearFullyTorn=false; tearDragActive=false; tearDragX=0; tearStripEl=null;
+    glowPhase='off'; glowBeams=[]; glowInfo=null;
+
+    isCurrentDrawGodPack=false;
+    document.getElementById('god-pack-bg').classList.add('hidden');
+    document.getElementById('god-pack-glow').classList.add('hidden');
+
+    /* God pack */
+    if(num===10&&Math.random()<0.005){
+        isCurrentDrawGodPack=true;
+        let srPool=Array.from({length:TOTAL_SUPER_RARE},(_,i)=>(i+1).toString().padStart(3,'0'));
+        srPool.sort(()=>Math.random()-0.5);
+        let sel=[];
+        if(TOTAL_SUPER_RARE>=10){sel=srPool.slice(0,10).map(id=>({type:'super_rare',id,isGodPack:true}));}
+        else{
+            sel=srPool.map(id=>({type:'super_rare',id,isGodPack:true}));
+            let rPool=Array.from({length:TOTAL_RARE},(_,i)=>(i+1).toString().padStart(3,'0')).sort(()=>Math.random()-0.5);
+            sel=sel.concat(rPool.slice(0,10-sel.length).map(id=>({type:'rare',id,isGodPack:true})));
         }
-
-        setTimeout(() => {
-            document.querySelectorAll('.pack-wrapper').forEach(p => p.classList.add('active'));
-            zone.classList.remove('hidden');
-        }, 50);
+        sel.sort(()=>Math.random()-0.5);
+        drawnCards=sel;
     }
 
-    const uiLayer = document.getElementById('ui-layer');
-    uiLayer.addEventListener('touchstart', (e) => {
-        if(document.getElementById('slash-zone').classList.contains('hidden')) return;
-        isSlashing = true; slashPath = [{x: e.touches[0].clientX, y: e.touches[0].clientY}];
-    });
+    /* Build pack DOM */
+    for(let i=0;i<num;i++){
+        const wrap=document.createElement('div');
+        wrap.className='pack-wrapper'; wrap.id=`pack-${i}`;
+        wrap.style.zIndex=50-i;
+        const ox=num>1?(Math.random()-0.5)*20:0;
+        const oy=num>1?(Math.random()-0.5)*20:0;
+        wrap.style.transform=`translate(${ox}px,${oy}px) rotate(${(Math.random()-0.5)*4}deg)`;
 
-    uiLayer.addEventListener('touchmove', (e) => {
-        if(!isSlashing) return;
-        const x = e.touches[0].clientX; const y = e.touches[0].clientY;
-        slashPath.push({x, y});
-        
-        const zoneRect = document.getElementById('slash-zone').getBoundingClientRect();
-        if(x > zoneRect.left && x < zoneRect.right && y > zoneRect.top && y < zoneRect.bottom) {
-            executeCut();
-            isSlashing = false;
+        const img=document.createElement('div');
+        img.className='pack-img';
+        img.style.backgroundImage=`url(${IMG_PACK})`;
+        wrap.appendChild(img);
+
+        stage.appendChild(wrap);
+
+        if(!isCurrentDrawGodPack){
+            const r=Math.random();
+            let cardType,maxId;
+            if(r<0.01){cardType='super_rare';maxId=TOTAL_SUPER_RARE;}
+            else if(r<0.04){cardType='rare';maxId=TOTAL_RARE;}
+            else{cardType='common';maxId=TOTAL_COMMON;}
+            drawnCards.push({type:cardType,id:Math.floor(Math.random()*maxId+1).toString().padStart(3,'0'),isGodPack:false});
         }
-    });
+    }
 
-    uiLayer.addEventListener('touchend', () => { isSlashing = false; slashPath = []; });
+    /* ONE tear strip on top pack only */
+    const topPack=document.getElementById('pack-0');
+    const strip=document.createElement('div');
+    strip.className='tear-strip'; strip.id='tear-strip';
+    topPack.appendChild(strip);
+    tearStripEl=strip;
 
-    function executeCut() {
-        document.getElementById('slash-zone').classList.add('hidden');
-        const packs = document.querySelectorAll('.pack-wrapper');
-        
-        let hasSuperRare = drawnCards.some(c => c.type === 'super_rare');
-        let hasRare = drawnCards.some(c => c.type === 'rare');
-        
-        let blastColor = '#ffffff';
-        if (isCurrentDrawGodPack) {
-            blastColor = 'rainbow';
-            document.getElementById('god-pack-bg').classList.remove('hidden');
-            document.getElementById('god-pack-glow').classList.remove('hidden');
-        }
-        else if (hasSuperRare) blastColor = '#ffd700';
-        else if (hasRare) blastColor = '#a020f0';
-        
-        triggerBlast(blastColor);
-        
-        packs.forEach((p, idx) => {
-            const left = p.querySelector('.split-left');
-            const right = p.querySelector('.split-right');
-            left.style.transform = 'translate(-30%, 50%) rotate(-30deg)';
-            right.style.transform = 'translate(30%, 50%) rotate(30deg)';
-            left.style.opacity = '0'; right.style.opacity = '0';
-            setTimeout(() => { showResultCard(idx); }, 500);
+    /* Slide packs in, then enable drag */
+    setTimeout(()=>{
+        document.querySelectorAll('.pack-wrapper').forEach(p=>p.classList.add('active'));
+        setTimeout(attachTearDrag, 1100);
+    },50);
+}
+
+/* ============================================================
+   TEAR STRIP — POINTER DRAG
+   ============================================================ */
+function attachTearDrag(){
+    if(!tearStripEl) return;
+    tearStripEl.addEventListener('pointerdown', onTearDown, {passive:false});
+    window.addEventListener('pointermove',   onTearMove, {passive:false});
+    window.addEventListener('pointerup',     onTearUp,   {passive:false});
+    window.addEventListener('pointercancel', onTearUp,   {passive:false});
+}
+function detachTearDrag(){
+    window.removeEventListener('pointermove',   onTearMove);
+    window.removeEventListener('pointerup',     onTearUp);
+    window.removeEventListener('pointercancel', onTearUp);
+}
+
+function onTearDown(e){
+    if(tearFullyTorn) return;
+    e.preventDefault();
+    tearDragActive=true;
+    tearDragStartX=e.clientX-tearDragX;
+    tearStripEl.style.cursor='grabbing';
+    tearStripEl.setPointerCapture(e.pointerId);
+}
+
+function onTearMove(e){
+    if(!tearDragActive||tearFullyTorn) return;
+    e.preventDefault();
+
+    const rawDX=e.clientX-tearDragStartX;
+    tearDragX=Math.max(0,rawDX);   /* only rightward drag */
+
+    /* Visual follow */
+    if(tearStripEl) tearStripEl.style.transform=`translateX(${tearDragX}px)`;
+
+    /* 100% threshold: strip has moved past its own width + pack width */
+    const packEl=document.getElementById('pack-0');
+    const packW=packEl?packEl.offsetWidth:window.innerWidth*0.3;
+    const stripW=tearStripEl?tearStripEl.offsetWidth:packW;
+    if(tearDragX >= packW + stripW + 10) onTearComplete();
+}
+
+function onTearUp(e){
+    if(!tearDragActive||tearFullyTorn) return;
+    tearDragActive=false;
+    /* Elastic: strip stays where released (no snap back) */
+    if(tearStripEl) tearStripEl.style.cursor='grab';
+}
+
+function onTearComplete(){
+    if(tearFullyTorn) return;
+    tearFullyTorn=true;
+    tearDragActive=false;
+    detachTearDrag();
+
+    /* Strip flies off with rotation */
+    if(tearStripEl){
+        tearStripEl.style.transition='transform 0.42s cubic-bezier(0.4,0,1,1), opacity 0.42s ease';
+        tearStripEl.style.transform=`translateX(${window.innerWidth*1.6}px) rotate(${18+Math.random()*35}deg)`;
+        tearStripEl.style.opacity='0';
+        setTimeout(()=>{ if(tearStripEl){tearStripEl.remove();tearStripEl=null;} },480);
+    }
+
+    /* Rarity key */
+    let rarityKey='common';
+    if(isCurrentDrawGodPack) rarityKey='god_pack';
+    else if(drawnCards.some(c=>c.type==='super_rare')) rarityKey='super_rare';
+    else if(drawnCards.some(c=>c.type==='rare'))       rarityKey='rare';
+
+    /* Fire glow beams */
+    startGlowBurst(rarityKey);
+
+    /* God pack background */
+    if(isCurrentDrawGodPack){
+        document.getElementById('god-pack-bg').classList.remove('hidden');
+        document.getElementById('god-pack-glow').classList.remove('hidden');
+    }
+
+    /* Blast particles */
+    triggerBlast(rarityKey);
+
+    /* Packs slide down after short delay */
+    setTimeout(()=>{
+        document.querySelectorAll('.pack-wrapper').forEach(p=>{
+            p.style.transition='bottom 0.65s cubic-bezier(0.4,0,0.6,1)';
+            p.style.bottom='-120%';
+        });
+    },280);
+
+    /* Cards rise after packs clear */
+    setTimeout(()=>{ drawnCards.forEach((_,idx)=>showResultCard(idx)); }, 880);
+}
+
+/* ============================================================
+   BLAST PARTICLES
+   ============================================================ */
+function triggerBlast(rarityKey){
+    const colorMap={
+        common:    ['#60a5fa','#93c5fd','#bfdbfe'],
+        rare:      ['#c084fc','#a855f7','#e9d5ff'],
+        super_rare:['#fbbf24','#f59e0b','#fde68a'],
+        god_pack:  ['#ff0000','#ff7f00','#ffff00','#00ff00','#0000ff','#4b0082','#9400d3']
+    };
+    const colors=colorMap[rarityKey]||colorMap.common;
+    for(let i=0;i<80;i++){
+        blastParticles.push({
+            x:window.innerWidth/2, y:window.innerHeight*0.45,
+            vx:(Math.random()-0.5)*15, vy:(Math.random()-0.5)*15,
+            s:Math.random()*5+2, life:1, color:colors[Math.floor(Math.random()*colors.length)]
         });
     }
+}
 
-    function triggerBlast(color) {
-        const rainbowColors = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#9400d3'];
-        for(let i=0; i<80; i++) {
-            let pColor = color === 'rainbow' ? rainbowColors[Math.floor(Math.random() * rainbowColors.length)] : color;
-            
-            blastParticles.push({
-                x: window.innerWidth/2, y: window.innerHeight * 0.4,
-                vx: (Math.random()-0.5) * 15, vy: (Math.random()-0.5) * 15,
-                s: Math.random() * 5 + 2, life: 1, color: pColor
-            });
-        }
+/* ============================================================
+   SHOW RESULT CARDS  (layout unchanged from original)
+   ============================================================ */
+function showResultCard(idx){
+    const result=drawnCards[idx];
+    const stage=document.getElementById('stage');
+    const container=document.createElement('div');
+    container.className='card-container';
+
+    let tx='-50%',ty='-50%',tscale='1';
+
+    if(drawnCards.length>1){
+        container.style.width='22vw'; container.style.maxWidth='90px';
+        tscale='0.85';
+        let x,y;
+        if(idx<3){y='25%';x=`${18+idx*32}%`;}
+        else if(idx<7){y='50%';x=`${16+(idx-3)*22.66}%`;}
+        else{y='75%';x=`${18+(idx-7)*32}%`;}
+        container.style.left=x; container.style.top=y;
+    }else{
+        container.style.left='50%'; container.style.top='50%'; tscale='1.2';
     }
 
-    function showResultCard(idx) {
-        const result = drawnCards[idx];
-        const stage = document.getElementById('stage');
-        const container = document.createElement('div');
-        container.className = 'card-container';
+    container.style.setProperty('--tx',tx);
+    container.style.setProperty('--ty',ty);
+    container.style.setProperty('--tscale',tscale);
 
-        let tx = '-50%', ty = '-50%', tscale = '1';
-
-        if(drawnCards.length > 1) { // 3-4-3 排列
-            container.style.width = '22vw';
-            container.style.maxWidth = '90px';
-            tscale = '0.85'; 
-
-            let x, y;
-            if (idx < 3) {
-                y = '25%';
-                x = `${18 + idx * 32}%`; 
-            } else if (idx < 7) {
-                y = '50%';
-                x = `${16 + (idx - 3) * 22.66}%`; 
-            } else {
-                y = '75%';
-                x = `${18 + (idx - 7) * 32}%`; 
-            }
-            container.style.left = x;
-            container.style.top = y;
-        } else {
-            container.style.left = '50%';
-            container.style.top = '50%';
-            tscale = '1.2';
-        }
-
-        container.style.setProperty('--tx', tx);
-        container.style.setProperty('--ty', ty);
-        container.style.setProperty('--tscale', tscale);
-
-        // 加入 background-size: 100% 100% 確保動態生成的 element 也能強行配合
-        let cardBackStyle = `background-image:url('${IMG_BACK}'); background-size: 100% 100%;`;
-        
-        if (result.isGodPack) {
-            cardBackStyle += ` box-shadow: var(--platinum-glow); border-radius: 12px;`;
-        } else {
-            let glow = 'var(--blue-glow)';
-            if (result.type === 'super_rare') glow = 'var(--gold-glow)';
-            else if (result.type === 'rare') glow = 'var(--purple-glow)';
-            cardBackStyle += ` box-shadow: ${glow}; border-radius: 12px;`;
-        }
-        
-        const frontImgSrc = `${BASE_URL}cards_${result.type}/${result.id}.PNG`;
-
-        container.innerHTML = `
-            <div class="card-inner" onclick="flipCard(event, this, '${result.type}', '${result.id}')">
-                <div class="card-back" style="${cardBackStyle}"></div>
-                <div class="card-front" style="background-image:url('${frontImgSrc}')"></div>
-            </div>
-        `;
-
-        stage.appendChild(container);
-        
-        container.style.display = 'block';
-        setTimeout(() => { container.classList.add('reveal'); }, 50 * idx);
+    let cardBackStyle=`background-image:url('${IMG_BACK}');background-size:100% 100%;`;
+    if(result.isGodPack){cardBackStyle+=`box-shadow:var(--platinum-glow);border-radius:12px;`;}
+    else{
+        let glow='var(--blue-glow)';
+        if(result.type==='super_rare') glow='var(--gold-glow)';
+        else if(result.type==='rare')  glow='var(--purple-glow)';
+        cardBackStyle+=`box-shadow:${glow};border-radius:12px;`;
     }
 
-    function checkDrawComplete() {
-        if (flippedCount === drawnCards.length) {
-            setTimeout(() => {
-                document.getElementById('action-buttons').classList.remove('hidden');
-            }, 500);
+    const frontSrc=`${BASE_URL}cards_${result.type}/${result.id}.PNG`;
+    container.innerHTML=`
+        <div class="card-inner" onclick="flipCard(event,this,'${result.type}','${result.id}')">
+            <div class="card-back"  style="${cardBackStyle}"></div>
+            <div class="card-front" style="background-image:url('${frontSrc}')"></div>
+        </div>`;
+
+    stage.appendChild(container);
+    container.style.display='block';
+    setTimeout(()=>container.classList.add('reveal'), 50*idx);
+}
+
+/* ============================================================
+   CARD FLIP  (unchanged)
+   ============================================================ */
+function checkDrawComplete(){
+    if(flippedCount===drawnCards.length) setTimeout(()=>document.getElementById('action-buttons').classList.remove('hidden'),500);
+}
+
+function flipCard(event,el,type,id){
+    if(event) event.stopPropagation();
+    if(el.classList.contains('is-flipped')){
+        if(flippedCount<drawnCards.length) flipAllRemaining();
+        else openFullscreen(type,id);
+        return;
+    }
+    el.classList.add('is-flipped'); flippedCount++; checkDrawComplete();
+    if(!currentCollectionData[type].includes(id)){currentCollectionData[type].push(id);saveUserCollection();}
+}
+
+function flipAllRemaining(){
+    if(drawnCards.length===0||flippedCount>=drawnCards.length) return;
+    document.querySelectorAll('.card-inner:not(.is-flipped)').forEach((card,i)=>setTimeout(()=>card.click(),i*100));
+}
+
+/* ============================================================
+   FULLSCREEN / DOWNLOAD  (unchanged)
+   ============================================================ */
+function openFullscreen(type,id){
+    const imgSrc=`${BASE_URL}cards_${type}/${id}.PNG`;
+    const overlay=document.getElementById('fullscreen-overlay');
+    const img=document.getElementById('fullscreen-card-img');
+    img.src=imgSrc;
+    if(isCurrentDrawGodPack)       img.style.boxShadow='var(--platinum-glow)';
+    else if(type==='super_rare')   img.style.boxShadow='var(--gold-glow)';
+    else if(type==='rare')         img.style.boxShadow='var(--purple-glow)';
+    else                           img.style.boxShadow='var(--blue-glow)';
+    overlay.classList.remove('hidden'); void overlay.offsetWidth; overlay.classList.add('active');
+}
+
+function closeFullscreen(){
+    const overlay=document.getElementById('fullscreen-overlay');
+    overlay.classList.remove('active');
+    setTimeout(()=>{overlay.classList.add('hidden');document.getElementById('save-hint').style.opacity='0';},300);
+}
+
+async function downloadImage(){
+    const img=document.getElementById('fullscreen-card-img');
+    const hint=document.getElementById('save-hint');
+    try{
+        hint.innerText="下載中...";hint.style.opacity='1';
+        const blob=await(await fetch(img.src)).blob();
+        const url=window.URL.createObjectURL(blob);
+        const a=document.createElement('a');a.style.display='none';a.href=url;
+        a.download='Porkemon_'+(img.src.split('/').pop()||'card.png');
+        document.body.appendChild(a);a.click();window.URL.revokeObjectURL(url);document.body.removeChild(a);
+        hint.innerText="下載完成！";setTimeout(()=>hint.style.opacity='0',2000);
+    }catch(e){console.error(e);hint.innerText="下載失敗，請長按圖片儲存";setTimeout(()=>hint.style.opacity='0',3000);}
+}
+
+async function resetCollection(){
+    if(confirm(`確定要重置 ${currentUser} 的收藏嗎？此操作無法還原並會同步至資料庫。`)){
+        currentCollectionData={common:[],rare:[],super_rare:[]};
+        updateCollectionUI();await saveUserCollection();
+    }
+}
+
+/* ============================================================
+   COLLECTION UI  (unchanged)
+   ============================================================ */
+function updateCollectionUI(){
+    const content=document.getElementById('collection-content');
+    const data=currentCollectionData||{common:[],rare:[],super_rare:[]};
+    content.innerHTML='';
+
+    function makeSection(title,list,total,type){
+        const t=document.createElement('div');t.className='collection-group-title';t.innerText=title;content.appendChild(t);
+        const grid=document.createElement('div');grid.className='collection-grid';
+        for(let i=1;i<=total;i++){
+            const id=i.toString().padStart(3,'0'),isOwned=list.includes(id);
+            const slot=document.createElement('div');slot.className='card-slot';
+            slot.innerHTML=`<img src="${isOwned?`${BASE_URL}cards_${type}/${id}.PNG`:IMG_BACK}" alt="${type} ${id}">`;
+            if(isOwned){slot.onclick=()=>openFullscreen(type,id);slot.style.cursor='pointer';}
+            grid.appendChild(slot);
         }
+        content.appendChild(grid);
     }
 
-    function flipCard(event, el, type, id) {
-        if (event) event.stopPropagation(); // 阻止冒泡到 stage 觸發全部翻開
-
-        if(el.classList.contains('is-flipped')) {
-            if (flippedCount < drawnCards.length) {
-                flipAllRemaining(); // 若還有未翻開的，點擊已翻開卡牌視同翻開全部
-            } else {
-                openFullscreen(type, id);
-            }
-            return;
-        }
-        
-        el.classList.add('is-flipped');
-        flippedCount++;
-        checkDrawComplete();
-
-        if(!currentCollectionData[type].includes(id)) {
-            currentCollectionData[type].push(id);
-            saveUserCollection();
-        }
-    }
-
-    function flipAllRemaining() {
-        if (drawnCards.length === 0 || flippedCount >= drawnCards.length) return;
-        const unflipped = document.querySelectorAll('.card-inner:not(.is-flipped)');
-        unflipped.forEach((card, index) => {
-            setTimeout(() => {
-                card.click();
-            }, index * 100); 
-        });
-    }
-
-    function openFullscreen(type, id) {
-        const imgSrc = `${BASE_URL}cards_${type}/${id}.PNG`;
-        const overlay = document.getElementById('fullscreen-overlay');
-        const img = document.getElementById('fullscreen-card-img');
-        
-        img.src = imgSrc;
-        
-        if (isCurrentDrawGodPack) {
-            img.style.boxShadow = 'var(--platinum-glow)';
-        } else {
-            if (type === 'super_rare') img.style.boxShadow = 'var(--gold-glow)';
-            else if (type === 'rare') img.style.boxShadow = 'var(--purple-glow)';
-            else img.style.boxShadow = 'var(--blue-glow)';
-        }
-        
-        overlay.classList.remove('hidden');
-        void overlay.offsetWidth; 
-        overlay.classList.add('active');
-    }
-
-    function closeFullscreen() {
-        const overlay = document.getElementById('fullscreen-overlay');
-        overlay.classList.remove('active');
-        setTimeout(() => {
-            overlay.classList.add('hidden');
-            document.getElementById('save-hint').style.opacity = '0'; 
-        }, 300);
-    }
-
-    async function downloadImage() {
-        const img = document.getElementById('fullscreen-card-img');
-        const imgSrc = img.src;
-        const hint = document.getElementById('save-hint');
-        
-        try {
-            hint.innerText = "下載中...";
-            hint.style.opacity = '1';
-
-            const response = await fetch(imgSrc);
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            
-            const filename = imgSrc.split('/').pop() || 'porkemon_card.png';
-            a.download = 'Porkemon_' + filename;
-            
-            document.body.appendChild(a);
-            a.click();
-            
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            hint.innerText = "下載完成！";
-            setTimeout(() => hint.style.opacity = '0', 2000);
-        } catch (error) {
-            console.error('下載圖片失敗:', error);
-            hint.innerText = "下載失敗，請長按圖片儲存";
-            setTimeout(() => hint.style.opacity = '0', 3000);
-        }
-    }
-
-    async function resetCollection() {
-        if(confirm(`確定要重置 ${currentUser} 的收藏嗎？此操作無法還原並會同步至資料庫。`)) {
-            currentCollectionData = { common: [], rare: [], super_rare: [] };
-            updateCollectionUI(); 
-            await saveUserCollection();
-        }
-    }
-
-    function updateCollectionUI() {
-        const content = document.getElementById('collection-content');
-        let data = currentCollectionData || { common: [], rare: [], super_rare: [] };
-        content.innerHTML = "";
-
-        const srTitle = document.createElement('div');
-        srTitle.className = 'collection-group-title';
-        srTitle.innerText = `超級稀有卡 (${data.super_rare.length}/${TOTAL_SUPER_RARE})`;
-        content.appendChild(srTitle);
-        
-        const srGrid = document.createElement('div');
-        srGrid.className = 'collection-grid';
-        for(let i=1; i<=TOTAL_SUPER_RARE; i++) {
-            const id = i.toString().padStart(3, '0');
-            const isOwned = data.super_rare.includes(id);
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            const imgSrc = isOwned ? `${BASE_URL}cards_super_rare/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Super Rare ${id}">`;
-            
-            if(isOwned) {
-                slot.onclick = () => openFullscreen('super_rare', id);
-                slot.style.cursor = 'pointer';
-            }
-            srGrid.appendChild(slot);
-        }
-        content.appendChild(srGrid);
-
-        const rareTitle = document.createElement('div');
-        rareTitle.className = 'collection-group-title';
-        rareTitle.innerText = `稀有卡 (${data.rare.length}/${TOTAL_RARE})`;
-        content.appendChild(rareTitle);
-        
-        const rareGrid = document.createElement('div');
-        rareGrid.className = 'collection-grid';
-        for(let i=1; i<=TOTAL_RARE; i++) {
-            const id = i.toString().padStart(3, '0');
-            const isOwned = data.rare.includes(id);
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            const imgSrc = isOwned ? `${BASE_URL}cards_rare/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Rare ${id}">`;
-            
-            if(isOwned) {
-                slot.onclick = () => openFullscreen('rare', id);
-                slot.style.cursor = 'pointer';
-            }
-            rareGrid.appendChild(slot);
-        }
-        content.appendChild(rareGrid);
-
-        const commonTitle = document.createElement('div');
-        commonTitle.className = 'collection-group-title';
-        commonTitle.innerText = `普通卡 (${data.common.length}/${TOTAL_COMMON})`;
-        content.appendChild(commonTitle);
-        
-        const commonGrid = document.createElement('div');
-        commonGrid.className = 'collection-grid';
-        for(let i=1; i<=TOTAL_COMMON; i++) {
-            const id = i.toString().padStart(3, '0');
-            const isOwned = data.common.includes(id);
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            const imgSrc = isOwned ? `${BASE_URL}cards_common/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Common ${id}">`;
-            
-            if(isOwned) {
-                slot.onclick = () => openFullscreen('common', id);
-                slot.style.cursor = 'pointer';
-            }
-            commonGrid.appendChild(slot);
-        }
-        content.appendChild(commonGrid);
-    }
+    makeSection(`超級稀有卡 (${data.super_rare.length}/${TOTAL_SUPER_RARE})`,data.super_rare,TOTAL_SUPER_RARE,'super_rare');
+    makeSection(`稀有卡 (${data.rare.length}/${TOTAL_RARE})`,data.rare,TOTAL_RARE,'rare');
+    makeSection(`普通卡 (${data.common.length}/${TOTAL_COMMON})`,data.common,TOTAL_COMMON,'common');
+}
 </script>
 </body>
 </html>
