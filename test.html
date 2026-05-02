@@ -420,11 +420,11 @@
         if (!currentCollectionData.diamonds) {
             currentCollectionData.diamonds = 0;
         }
-        // 如果是新玩家（首次登入），直接給予 20 鑽石
+        // 新玩家登入送 60 鑽
         if (!lastLoginDate) {
-            currentCollectionData.diamonds = 20;
+            currentCollectionData.diamonds = 60;
             lastLoginDate = new Date().toISOString();
-            setTimeout(() => { alert("🎉 歡迎新玩家！已發放初始 20 💎"); }, 200);
+            setTimeout(() => { alert("🎉 歡迎新玩家！已發放初始 60 💎"); }, 200);
             return true;
         }
         return false;
@@ -443,11 +443,12 @@
 
         const lastLogin = lastLoginDate ? new Date(lastLoginDate) : new Date(0);
         
-        if (lastLogin < baseline && lastLoginDate !== null) { // 確保不是新玩家
-            currentCollectionData.diamonds = (currentCollectionData.diamonds || 0) + 20;
+        if (lastLogin < baseline && lastLoginDate !== null) { 
+            // 每日登入送 30 鑽
+            currentCollectionData.diamonds = (currentCollectionData.diamonds || 0) + 30;
             if (currentCollectionData.diamonds > 999) currentCollectionData.diamonds = 999;
             lastLoginDate = now.toISOString();
-            setTimeout(() => { alert("🎉 每日登入獎勵！已領取 20 💎"); }, 200);
+            setTimeout(() => { alert("🎉 每日登入獎勵！已領取 30 💎"); }, 200);
             return true;
         }
         return false;
@@ -534,7 +535,7 @@
         } catch (err) {
             console.error("Supabase 發生例外狀況:", err);
             alert("雲端同步異常...\n\n自動啟用「單機離線模式」。");
-            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 20 };
+            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 60 };
             lastLoginDate = new Date().toISOString();
             updateDiamondUI();
         } finally {
@@ -553,6 +554,7 @@
                 .upsert({ 
                     username: currentUser,
                     collection: currentCollectionData, 
+                    diamonds: currentCollectionData.diamonds, // ⭐ 新增這行：獨立抽出 diamonds 寫入資料庫新欄位
                     last_login_date: lastLoginDate,
                     updated_at: new Date().toISOString() 
                 });
@@ -567,7 +569,7 @@
     function prepareDraw(num) {
         const cost = num === 1 ? 3 : 27;
         if (currentCollectionData.diamonds < cost) {
-            alert("💎 鑽石不足！\n每日 08:00 重置將發放 20 💎");
+            alert("💎 鑽石不足！\n每日 08:00 重置將發放 30 💎");
             return;
         }
 
@@ -889,12 +891,12 @@
 
     async function resetCollection() {
         if(confirm(`確定要重置 ${currentUser} 的收藏與鑽石嗎？此操作無法還原。`)) {
-            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 20 };
+            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 60 };
             lastLoginDate = new Date().toISOString();
             updateCollectionUI(); 
             updateDiamondUI();
             await saveUserData();
-            alert("已重置並發放初始 20 💎");
+            alert("已重置並發放初始 60 💎");
         }
     }
 
