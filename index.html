@@ -7,21 +7,20 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            /* 更新光環顏色定義 */
-            --blue-glow: 0 0 20px #0055ff, 0 0 40px #00aaff, 0 0 80px #88ddff; /* 普通 */
-            --purple-glow: 0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0; /* 稀有 */
-            --gold-glow: 0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800; /* 超級稀有 */
-            --platinum-glow: 0 0 20px #ffffff, 0 0 40px #e5e4e2, 0 0 80px #fffafa, 0 0 100px #ffffff; /* God Pack 白金 */
+            /* 光環顏色定義 */
+            --blue-glow: 0 0 20px #0055ff, 0 0 40px #00aaff, 0 0 80px #88ddff;
+            --purple-glow: 0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0;
+            --gold-glow: 0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800;
+            --red-glow: 0 0 20px #ff0000, 0 0 40px #ff4444, 0 0 80px #ff8888;
+            --platinum-glow: 0 0 20px #ffffff, 0 0 40px #e5e4e2, 0 0 80px #fffafa, 0 0 100px #ffffff;
         }
 
         body, html {
-            margin: 0; padding: 0; width: 100%; 
-            height: 100%; height: 100dvh; 
+            margin: 0; padding: 0; width: 100%; height: 100%; height: 100dvh; 
             background-color: #000; color: white;
             font-family: "Microsoft JhengHei", sans-serif;
             overflow: hidden; touch-action: none;
-            overscroll-behavior: none; 
-            -webkit-touch-callout: none; 
+            overscroll-behavior: none; -webkit-touch-callout: none; 
         }
 
         /* 背景與 UI 層次 */
@@ -35,42 +34,37 @@
         }
         .hidden { display: none !important; }
 
+        /* 玩家狀態資訊條 */
+        #top-info {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px;
+            border: 1px solid #fff; font-size: 18px; font-weight: bold;
+            z-index: 200; pointer-events: auto; white-space: nowrap; box-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+
         /* God Pack 專屬彩虹背景特效 */
         #god-pack-bg {
-            position: absolute; top: 50%; left: 50%;
-            width: 250vw; height: 250vh;
+            position: absolute; top: 50%; left: 50%; width: 250vw; height: 250vh;
             transform: translate(-50%, -50%);
             background: conic-gradient(from 0deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000);
-            animation: spin-rainbow 4s linear infinite;
-            opacity: 0.6;
-            z-index: -2; /* 置於 main-screen 內層最底部 */
-            pointer-events: none;
+            animation: spin-rainbow 4s linear infinite; opacity: 0.6; z-index: -2; pointer-events: none;
         }
         #god-pack-glow {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 65%);
-            z-index: -1;
-            pointer-events: none;
-            animation: pulse-glow 2s ease-in-out infinite alternate;
+            z-index: -1; pointer-events: none; animation: pulse-glow 2s ease-in-out infinite alternate;
         }
-        @keyframes spin-rainbow {
-            from { transform: translate(-50%, -50%) rotate(0deg); }
-            to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        @keyframes pulse-glow {
-            from { opacity: 0.5; }
-            to { opacity: 1; }
-        }
+        @keyframes spin-rainbow { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes pulse-glow { from { opacity: 0.5; } to { opacity: 1; } }
 
         /* 身份選擇 */
         .select-wrapper { position: relative; margin-bottom: 50px; pointer-events: auto; display: inline-block; }
-        #user-select {
-            appearance: none; -webkit-appearance: none; background: transparent; border: none; color: white;
-            font-size: 48px; font-weight: bold; 
-            padding: 0 40px; cursor: pointer; outline: none;
-            text-align: center; text-align-last: center; 
+        #username-input {
+            background: transparent; border: none; border-bottom: 2px solid #fff;
+            color: white; font-size: 32px; font-weight: bold; padding: 10px 20px;
+            text-align: center; outline: none; width: 250px;
         }
-        .custom-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 24px; color: #888; pointer-events: none; }
+        #username-input::placeholder { color: rgba(255,255,255,0.4); font-size: 24px; }
         
         #btn-enter { background: transparent; border: 1.5px solid #fff; color: #fff; padding: 10px 40px; font-size: 18px; cursor: pointer; pointer-events: auto; transition: opacity 0.3s; }
         #btn-enter:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -78,14 +72,12 @@
         /* 抽卡舞台 */
         #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: auto; }
 
-        /* 切開動畫與包裝容器 */
+        /* 切開動畫與包裝容器 (已調整大小與位置避免重疊) */
         .pack-wrapper {
-            position: absolute; bottom: -100%; 
-            height: 70vh; aspect-ratio: 75 / 120; 
-            transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none;
+            position: absolute; bottom: -100%; height: 70vh; max-height: 600px; max-width: 85vw; aspect-ratio: 75 / 120; 
+            transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
-        .pack-wrapper.active { bottom: 15%; pointer-events: auto; }
+        .pack-wrapper.active { bottom: 10%; pointer-events: auto; }
         
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -100,92 +92,124 @@
 
         /* 3D 翻轉卡片容器 */
         .card-container {
-            position: absolute; width: 50vh; max-width: 280px; 
-            aspect-ratio: 63/88; /* 確保容器響應式維持 63:88 比例 */
+            position: absolute; width: 45vh; max-width: 250px; aspect-ratio: 63/88; 
             perspective: 1000px; display: none; z-index: 100; opacity: 0;
             transition: opacity 1s ease-out, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translate(-50%, calc(-50% + 100px)) scale(0.5); /* 初始位置與縮放 */
-            transform-origin: center center;
-            pointer-events: auto; cursor: pointer;
+            transform: translate(-50%, calc(-50% + 50px)) scale(0.5); 
+            transform-origin: center center; pointer-events: auto; cursor: pointer;
         }
-        .card-container.reveal { 
-            opacity: 1; transform: translate(var(--tx, -50%), var(--ty, -50%)) scale(var(--tscale, 1));
-        }
+        .card-container.reveal { opacity: 1; transform: translate(var(--tx, -50%), var(--ty, -50%)) scale(var(--tscale, 1)); }
         
         .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.8s; transform-style: preserve-3d; }
-        
-        /* 卡牌正反面：強制拉伸填滿 63:88 容器 */
         .card-front, .card-back {
-            position: absolute; width: 100%; height: 100%;
-            backface-visibility: hidden; border-radius: 12px;
-            background-size: 100% 100%; /* 強制圖片拉伸至完全符合容器尺寸 */
-            background-repeat: no-repeat;
-            background-position: center;
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 12px;
+            background-size: 100% 100%; background-repeat: no-repeat; background-position: center;
         }
         
-        .card-back { 
-            transform: rotateY(0deg);
-            border: none; /* 移除邊框避免干擾光暈位置 */
-            border-radius: 12px; /* 確保圓角與光暈路徑一致 */
-            overflow: hidden;
-        }
-
+        .card-back { transform: rotateY(0deg); border: none; border-radius: 12px; overflow: hidden; }
         .card-front { transform: rotateY(180deg); }
         .is-flipped { transform: rotateY(180deg); }
 
         /* 底部導航 & 共用 Pill 形按鈕 */
-        .bottom-nav { position: absolute; bottom: 40px; display: flex; gap: 20px; pointer-events: auto; z-index: 250; }
-        .draw-btn { background: #fff; color: #000; border: none; padding: 12px 30px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; }
+        .bottom-nav { 
+            position: absolute; 
+            bottom: 20px; 
+            width: 90%;
+            max-width: 400px;
+            display: flex; 
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px; 
+            pointer-events: auto; 
+            z-index: 250; 
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        .draw-btn { 
+            background: #fff; 
+            color: #000; 
+            border: none; 
+            padding: 10px 5px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            white-space: nowrap; 
+            flex: 1;
+            text-align: center;
+            min-width: 0; 
+        }
         
         .pill-btn {
             background: transparent; color: #fff; border: 2px solid #fff; border-radius: 50px;
-            padding: 10px 30px; font-size: 18px; font-weight: bold; cursor: pointer; pointer-events: auto;
+            padding: 8px 20px; font-size: 16px; font-weight: bold; cursor: pointer; pointer-events: auto;
         }
 
         /* 收藏頁面 */
-        #collection-screen { justify-content: flex-start; padding-top: 30px; overflow: hidden; box-sizing: border-box; }
-        .collection-header { padding: 10px 20px; text-align: center; width: 100%; flex-shrink: 0; pointer-events: auto; }
-        .collection-controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
+        #collection-screen { justify-content: flex-start; padding-top: 20px; overflow: hidden; box-sizing: border-box; }
+        .collection-header { padding: 5px 10px; text-align: center; width: 100%; flex-shrink: 0; pointer-events: auto; }
+        .collection-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 15px; }
         
-        #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: 50px; -webkit-overflow-scrolling: touch; }
-        
-        .collection-group-title { text-align: center; font-size: 22px; font-weight: bold; margin: 20px 0 15px; color: #fff; }
-        .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
-        
-        /* 收藏卡槽：強制維持 63:88，圖片強制變形填滿 */
-        .card-slot { 
-            width: 100%;
-            aspect-ratio: 63/88; 
-            background: #222; border-radius: 5px; overflow: hidden; 
+        /* 頂部導航分頁 */
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            padding: 0 10px;
         }
-        .card-slot img { 
-            width: 100%;
-            height: 100%; 
-            object-fit: fill; /* 強制變形填滿留白空間，不裁切不縮小 */
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
         }
+        .tab-btn.active {
+            background: white;
+            color: black;
+            font-weight: bold;
+        }
+
+        #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
+        
+        .collection-group-title { text-align: center; font-size: 18px; font-weight: bold; margin: 10px 0; color: #fff; }
+        /* 收藏頁卡牌改為一行 3 張 */
+        .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 15px; }
+        
+        .card-slot { width: 100%; aspect-ratio: 63/88; background: #222; border-radius: 5px; overflow: hidden; position: relative; }
+        .card-slot img { width: 100%; height: 100%; object-fit: fill; }
 
         /* 全螢幕放大預覽 */
         #fullscreen-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.85); z-index: 9999;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
         }
         #fullscreen-overlay.active { opacity: 1; pointer-events: auto; }
         
         #fullscreen-card-img {
-            height: 65vh;
-            max-height: 800px; 
-            aspect-ratio: 63/88; /* 確保維持 63:88 比例 */
-            border-radius: 12px; /* 統一圓角半徑 */
-            object-fit: fill; /* 強制圖片填滿，確保邊緣與 box-shadow 完全重合 */
-            -webkit-user-select: auto; user-select: auto;
-            -webkit-touch-callout: default; pointer-events: auto;
+            height: 60vh; max-height: 600px; aspect-ratio: 63/88; border-radius: 12px;
+            object-fit: fill; -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; pointer-events: auto;
         }
 
-        .long-press-hint { color: #fff; margin-top: 15px; font-size: 18px; font-weight: bold; text-align: center; letter-spacing: 1px; }
-        #save-hint { color: #fff; margin-top: 5px; font-size: 16px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; height: 20px; }
-        .overlay-controls { margin-top: 15px; display: flex; gap: 20px; pointer-events: auto; }
+        .long-press-hint { color: #fff; margin-top: 15px; font-size: 16px; font-weight: bold; text-align: center; letter-spacing: 1px; }
+        #save-hint { color: #fff; margin-top: 5px; font-size: 14px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; height: 20px; }
+        .overlay-controls { margin-top: 10px; display: flex; gap: 15px; pointer-events: auto; }
+        
+        /* 浮動加鑽動畫 */
+        .float-text {
+            position: fixed; color: #00ffff; font-weight: bold; font-size: 24px; text-shadow: 0 0 5px #000;
+            z-index: 1000; pointer-events: none; transition: all 1s ease-out; opacity: 1;
+        }
+        
+        .tab-section { display: none; }
+        .tab-section.active { display: block; }
+
     </style>
 </head>
 <body>
@@ -196,20 +220,16 @@
 <div id="ui-layer">
     <section id="login-screen" class="screen">
         <div class="select-wrapper">
-            <select id="user-select">
-                <option value="Suki">Suki</option>
-                <option value="Nelson">Nelson</option>
-                <option value="爸爸">爸爸</option>
-                <option value="媽媽">媽媽</option>
-                <option value="細佬">細佬</option>
-                <option value="Rainbow">Rainbow</option>
-            </select>
-            <div class="custom-arrow">▼</div>
+            <input type="text" id="username-input" placeholder="請輸入玩家名稱" autocomplete="off" />
         </div>
         <button id="btn-enter">進入卡池</button>
     </section>
 
     <section id="main-screen" class="screen hidden">
+        <div id="top-info">
+            <span id="display-username"></span> | 💎 <span id="display-diamonds">0</span>
+        </div>
+
         <div id="god-pack-bg" class="hidden"></div>
         <div id="god-pack-glow" class="hidden"></div>
         
@@ -218,8 +238,8 @@
         </div>
         
         <div class="bottom-nav hidden" id="action-buttons">
-            <button class="draw-btn" onclick="prepareDraw(1)">單抽</button>
-            <button class="draw-btn" onclick="prepareDraw(10)">十連抽</button>
+            <button class="draw-btn" onclick="prepareDraw(1)">單抽 3💎</button>
+            <button class="draw-btn" onclick="prepareDraw(10)">十連 27💎</button>
             <button class="draw-btn" style="background:none; color:white; border:1px solid white;" onclick="showScreen('collection-screen')">收藏</button>
         </div>
     </section>
@@ -228,11 +248,16 @@
         <div class="collection-header">
             <div class="collection-controls">
                 <button class="pill-btn" onclick="showScreen('main-screen')">返回</button>
-                <button class="pill-btn" onclick="resetCollection()">重置</button>
+                <h2 id="user-title" style="margin: 0; font-size: 18px;"></h2>
+                <button class="pill-btn" onclick="resetCollection()" style="border-color: #ff4444; color: #ff4444;">重置</button>
             </div>
-            <h2 id="user-title" style="margin: 10px 0 0 0;"></h2>
+            <div class="tab-nav" id="collection-tabs">
+                <!-- Tabs will be generated here -->
+            </div>
         </div>
-        <div id="collection-content"></div>
+        <div id="collection-content">
+            <!-- Content will be generated here -->
+        </div>
     </section>
 </div>
 
@@ -253,20 +278,36 @@
     const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
     const IMG_PACK = BASE_URL + "packs/pack.png";
     const IMG_BACK = BASE_URL + "back/back.png";
+    
     const TOTAL_COMMON = 28;
     const TOTAL_RARE = 16;
     const TOTAL_SUPER_RARE = 9;
+    const TOTAL_SPECIAL_LIMITED = 5; 
+
+    const EVENT_ACTIVE = true; 
 
     let currentUser = "";
-    let currentCollectionData = { common: [], rare: [], super_rare: [] }; 
+    let currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 }; 
+    let lastLoginDate = null;
+    
     let drawnCards = [];
-    let flippedCount = 0; // 用於追蹤當前翻開的卡牌數量
+    let flippedCount = 0;
     let isSlashing = false;
     let gameState = "login";
     let isCurrentDrawGodPack = false;
 
     // ==========================================
-    // 2. 獨立且優先執行的 Canvas 渲染邏輯
+    // 本地記憶初始化 (僅玩家名稱)
+    // ==========================================
+    window.onload = () => {
+        const savedName = localStorage.getItem('porkemon_username');
+        if (savedName) {
+            document.getElementById('username-input').value = savedName;
+        }
+    };
+
+    // ==========================================
+    // 2. Canvas 渲染邏輯
     // ==========================================
     const bgCanvas = document.getElementById('bg-canvas');
     const bgCtx = bgCanvas.getContext('2d');
@@ -373,8 +414,53 @@
     }
 
     // ==========================================
-    // 4. UI 切換與遊戲邏輯
+    // 4. 資料庫邏輯與 UI 更新
     // ==========================================
+    function giveInitialDiamondsIfNeeded() {
+        if (!currentCollectionData.diamonds) {
+            currentCollectionData.diamonds = 0;
+        }
+        // 新玩家登入送 60 鑽
+        if (!lastLoginDate) {
+            currentCollectionData.diamonds = 60;
+            lastLoginDate = new Date().toISOString();
+            currentCollectionData.lastLoginDate = lastLoginDate; // 同步寫入 JSON 防止遺失
+            setTimeout(() => { alert("🎉 歡迎新玩家！已發放初始 60 💎"); }, 200);
+            return true;
+        }
+        return false;
+    }
+
+    function checkDailyReset() {
+        const now = new Date();
+        const baseline = new Date(now);
+        
+        if (now.getHours() >= 8) {
+            baseline.setHours(8, 0, 0, 0);
+        } else {
+            baseline.setDate(baseline.getDate() - 1);
+            baseline.setHours(8, 0, 0, 0);
+        }
+
+        const lastLogin = lastLoginDate ? new Date(lastLoginDate) : new Date(0);
+        
+        if (lastLogin < baseline && lastLoginDate !== null) { 
+            // 每日登入送 30 鑽
+            currentCollectionData.diamonds = (currentCollectionData.diamonds || 0) + 30;
+            if (currentCollectionData.diamonds > 999) currentCollectionData.diamonds = 999;
+            lastLoginDate = now.toISOString();
+            currentCollectionData.lastLoginDate = lastLoginDate; // 同步寫入 JSON 防止遺失
+            setTimeout(() => { alert("🎉 每日登入獎勵！已領取 30 💎"); }, 200);
+            return true;
+        }
+        return false;
+    }
+
+    function updateDiamondUI() {
+        document.getElementById('display-username').innerText = currentUser;
+        document.getElementById('display-diamonds').innerText = currentCollectionData.diamonds || 0;
+    }
+
     function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
@@ -387,7 +473,6 @@
             updateCollectionUI();
             document.getElementById('action-buttons').classList.remove('hidden');
         } else if (id === 'main-screen' && drawnCards.length === 0) {
-            // 如果剛進入卡池畫面且尚未抽卡，確保顯示選單
             document.getElementById('action-buttons').classList.remove('hidden');
             document.body.style.touchAction = 'none';
         } else {
@@ -396,7 +481,11 @@
     }
 
     document.getElementById('btn-enter').onclick = async () => {
-        currentUser = document.getElementById('user-select').value;
+        const nameVal = document.getElementById('username-input').value.trim();
+        if (!nameVal) { alert("請輸入玩家名稱！"); return; }
+
+        currentUser = nameVal;
+        localStorage.setItem('porkemon_username', currentUser);
         document.getElementById('user-title').innerText = currentUser + " 的收藏";
         
         const btn = document.getElementById('btn-enter');
@@ -405,31 +494,55 @@
 
         try {
             if (!supabaseClient) throw new Error("資料庫模組未能啟動。");
-
+            
+            // 從 Supabase 讀取資料
             const { data, error } = await supabaseClient
                 .from('user_collections')
-                .select('collection')
+                .select('*')
                 .eq('username', currentUser)
                 .maybeSingle();
-
+            
             if (error) throw error;
 
             if (data) {
-                currentCollectionData = data.collection || { common: [], rare: [], super_rare: [] };
-                if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
-                if(!currentCollectionData.rare) currentCollectionData.rare = [];
-                if(!currentCollectionData.common) currentCollectionData.common = [];
+                // 已存在玩家
+                currentCollectionData = data.collection || { common: [], rare: [], super_rare: [], special_limited: [] };
+                // 讀取資料庫真實的鑽石數量
+                currentCollectionData.diamonds = data.diamonds !== null && data.diamonds !== undefined ? data.diamonds : (currentCollectionData.diamonds || 0);
+                // 優先從 JSON 中獲取最後登入時間
+                lastLoginDate = currentCollectionData.lastLoginDate || null;
             } else {
-                currentCollectionData = { common: [], rare: [], super_rare: [] };
-                const { error: insertError } = await supabaseClient
-                    .from('user_collections')
-                    .insert({ username: currentUser, collection: currentCollectionData });
-                if (insertError) throw insertError;
+                // 新玩家
+                currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 };
+                lastLoginDate = null;
             }
+
+            // 防護結構
+            if(!currentCollectionData.special_limited) currentCollectionData.special_limited = [];
+            if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
+            if(!currentCollectionData.rare) currentCollectionData.rare = [];
+            if(!currentCollectionData.common) currentCollectionData.common = [];
+
+            let isInitial = giveInitialDiamondsIfNeeded();
+            let isUpdated = false;
+            
+            if (!isInitial) {
+                isUpdated = checkDailyReset();
+            }
+
+            updateDiamondUI();
+
+            // 若有變更則同步至雲端
+            if (!data || isInitial || isUpdated) {
+                await saveUserData();
+            }
+
         } catch (err) {
             console.error("Supabase 發生例外狀況:", err);
-            alert("雲端同步異常，原因：\n" + (err.message || JSON.stringify(err)) + "\n\n將自動啟用「單機離線模式」。");
-            currentCollectionData = { common: [], rare: [], super_rare: [] };
+            alert("雲端同步異常...\n\n自動啟用「單機離線模式」。");
+            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 60 };
+            lastLoginDate = new Date().toISOString();
+            updateDiamondUI();
         } finally {
             gameState = 'drawing';
             showScreen('main-screen');
@@ -438,14 +551,20 @@
         }
     };
 
-    async function saveUserCollection() {
+    async function saveUserData() {
         if (!supabaseClient) return;
+        
+        // 將登入日期包裹在 JSON 中避免資料庫欄位不匹配問題
+        currentCollectionData.lastLoginDate = lastLoginDate;
+
         try {
             await supabaseClient
                 .from('user_collections')
                 .upsert({ 
                     username: currentUser,
                     collection: currentCollectionData, 
+                    diamonds: currentCollectionData.diamonds, 
+                    // 移除了導致無法創建使用者的 last_login_date (因為 table 沒有這個欄位)
                     updated_at: new Date().toISOString() 
                 });
         } catch (err) {
@@ -453,10 +572,21 @@
         }
     }
 
+    // ==========================================
+    // 5. 抽卡邏輯
+    // ==========================================
     function prepareDraw(num) {
-        // 隱藏選單防止誤觸
-        document.getElementById('action-buttons').classList.add('hidden');
+        const cost = num === 1 ? 3 : 27;
+        if (currentCollectionData.diamonds < cost) {
+            alert("💎 鑽石不足！\n每日 08:00 重置將發放 30 💎");
+            return;
+        }
 
+        currentCollectionData.diamonds -= cost;
+        updateDiamondUI();
+        saveUserData(); // 更新鑽石數量並同步至資料庫
+
+        document.getElementById('action-buttons').classList.add('hidden');
         const stage = document.getElementById('stage');
         Array.from(stage.children).forEach(child => {
             if(child.id !== 'slash-zone') child.remove();
@@ -475,7 +605,6 @@
             isCurrentDrawGodPack = true;
             let srPool = Array.from({length: TOTAL_SUPER_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
             srPool.sort(() => Math.random() - 0.5);
-            
             let selectedCards = [];
             if (TOTAL_SUPER_RARE >= 10) {
                 selectedCards = srPool.slice(0, 10).map(id => ({ type: 'super_rare', id: id, isGodPack: true }));
@@ -491,30 +620,18 @@
             drawnCards = selectedCards;
         }
 
-        for(let i=0; i<num; i++) {
-            const wrap = document.createElement('div');
-            wrap.className = 'pack-wrapper';
-            wrap.id = `pack-${i}`;
-            wrap.style.zIndex = 50 - i;
-            
-            let offsetX = num > 1 ? (Math.random()-0.5)*20 : 0;
-            let offsetY = num > 1 ? (Math.random()-0.5)*20 : 0;
-            wrap.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(${(Math.random()-0.5)*4}deg)`;
-            
-            wrap.innerHTML = `
-                <div class="pack-half split-left" style="background-image:url(${IMG_PACK})"></div>
-                <div class="pack-half split-right" style="background-image:url(${IMG_PACK})"></div>
-            `;
-            stage.appendChild(wrap);
-            
-            if (!isCurrentDrawGodPack) {
+        if (drawnCards.length === 0) {
+            for(let i=0; i<num; i++) {
                 const rand = Math.random();
                 let cardType, maxId;
                 
-                if (rand < 0.01) {
+                if (EVENT_ACTIVE && rand < 0.005 && TOTAL_SPECIAL_LIMITED > 0) {
+                    cardType = 'special_limited';
+                    maxId = TOTAL_SPECIAL_LIMITED;
+                } else if (rand < 0.015) { 
                     cardType = 'super_rare';
                     maxId = TOTAL_SUPER_RARE;
-                } else if (rand < 0.04) { 
+                } else if (rand < 0.045) { 
                     cardType = 'rare';
                     maxId = TOTAL_RARE;
                 } else {
@@ -525,6 +642,30 @@
                 const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
                 drawnCards.push({type: cardType, id: cardId, isGodPack: false});
             }
+
+            if (num === 10) {
+                let hasRareOrAbove = drawnCards.some(c => c.type !== 'common');
+                if (!hasRareOrAbove) {
+                    const cardId = Math.floor(Math.random() * TOTAL_RARE + 1).toString().padStart(3, '0');
+                    drawnCards[9] = {type: 'rare', id: cardId, isGodPack: false};
+                }
+            }
+        }
+
+        for(let i=0; i<num; i++) {
+            const wrap = document.createElement('div');
+            wrap.className = 'pack-wrapper';
+            wrap.id = `pack-${i}`;
+            wrap.style.zIndex = 50 - i;
+            
+            let offsetX = num > 1 ? (Math.random()-0.5)*20 : 0;
+            let offsetY = num > 1 ? (Math.random()-0.5)*20 : 0;
+            wrap.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(${(Math.random()-0.5)*4}deg)`;
+            wrap.innerHTML = `
+                <div class="pack-half split-left" style="background-image:url(${IMG_PACK})"></div>
+                <div class="pack-half split-right" style="background-image:url(${IMG_PACK})"></div>
+            `;
+            stage.appendChild(wrap);
         }
 
         setTimeout(() => {
@@ -538,7 +679,6 @@
         if(document.getElementById('slash-zone').classList.contains('hidden')) return;
         isSlashing = true; slashPath = [{x: e.touches[0].clientX, y: e.touches[0].clientY}];
     });
-
     uiLayer.addEventListener('touchmove', (e) => {
         if(!isSlashing) return;
         const x = e.touches[0].clientX; const y = e.touches[0].clientY;
@@ -550,13 +690,13 @@
             isSlashing = false;
         }
     });
-
     uiLayer.addEventListener('touchend', () => { isSlashing = false; slashPath = []; });
 
     function executeCut() {
         document.getElementById('slash-zone').classList.add('hidden');
         const packs = document.querySelectorAll('.pack-wrapper');
         
+        let hasSpecial = drawnCards.some(c => c.type === 'special_limited');
         let hasSuperRare = drawnCards.some(c => c.type === 'super_rare');
         let hasRare = drawnCards.some(c => c.type === 'rare');
         
@@ -566,6 +706,7 @@
             document.getElementById('god-pack-bg').classList.remove('hidden');
             document.getElementById('god-pack-glow').classList.remove('hidden');
         }
+        else if (hasSpecial) blastColor = '#ff0000';
         else if (hasSuperRare) blastColor = '#ffd700';
         else if (hasRare) blastColor = '#a020f0';
         
@@ -585,7 +726,6 @@
         const rainbowColors = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#9400d3'];
         for(let i=0; i<80; i++) {
             let pColor = color === 'rainbow' ? rainbowColors[Math.floor(Math.random() * rainbowColors.length)] : color;
-            
             blastParticles.push({
                 x: window.innerWidth/2, y: window.innerHeight * 0.4,
                 vx: (Math.random()-0.5) * 15, vy: (Math.random()-0.5) * 15,
@@ -599,58 +739,45 @@
         const stage = document.getElementById('stage');
         const container = document.createElement('div');
         container.className = 'card-container';
-
         let tx = '-50%', ty = '-50%', tscale = '1';
 
-        if(drawnCards.length > 1) { // 3-4-3 排列
-            container.style.width = '22vw';
-            container.style.maxWidth = '90px';
-            tscale = '0.85'; 
+        if(drawnCards.length > 1) { 
+            container.style.width = '20vw';
+            container.style.maxWidth = '80px';
+            tscale = '0.9'; 
 
             let x, y;
-            if (idx < 3) {
-                y = '25%';
-                x = `${18 + idx * 32}%`; 
-            } else if (idx < 7) {
-                y = '50%';
-                x = `${16 + (idx - 3) * 22.66}%`; 
-            } else {
-                y = '75%';
-                x = `${18 + (idx - 7) * 32}%`; 
-            }
-            container.style.left = x;
-            container.style.top = y;
+            if (idx < 3) { y = '30%'; x = `${20 + idx * 30}%`; } 
+            else if (idx < 7) { y = '55%'; x = `${15 + (idx - 3) * 23.33}%`; } 
+            else { y = '80%'; x = `${20 + (idx - 7) * 30}%`; }
+            
+            container.style.left = x; container.style.top = y;
         } else {
-            container.style.left = '50%';
-            container.style.top = '50%';
+            container.style.left = '50%'; container.style.top = '50%';
             tscale = '1.2';
         }
 
-        container.style.setProperty('--tx', tx);
-        container.style.setProperty('--ty', ty);
-        container.style.setProperty('--tscale', tscale);
-
-        // 加入 background-size: 100% 100% 確保動態生成的 element 也能強行配合
+        container.style.setProperty('--tx', tx); container.style.setProperty('--ty', ty); container.style.setProperty('--tscale', tscale);
+        
         let cardBackStyle = `background-image:url('${IMG_BACK}'); background-size: 100% 100%;`;
         
         if (result.isGodPack) {
             cardBackStyle += ` box-shadow: var(--platinum-glow); border-radius: 12px;`;
         } else {
             let glow = 'var(--blue-glow)';
-            if (result.type === 'super_rare') glow = 'var(--gold-glow)';
+            if (result.type === 'special_limited') glow = 'var(--red-glow)';
+            else if (result.type === 'super_rare') glow = 'var(--gold-glow)';
             else if (result.type === 'rare') glow = 'var(--purple-glow)';
             cardBackStyle += ` box-shadow: ${glow}; border-radius: 12px;`;
         }
         
         const frontImgSrc = `${BASE_URL}cards_${result.type}/${result.id}.PNG`;
-
         container.innerHTML = `
             <div class="card-inner" onclick="flipCard(event, this, '${result.type}', '${result.id}')">
                 <div class="card-back" style="${cardBackStyle}"></div>
                 <div class="card-front" style="background-image:url('${frontImgSrc}')"></div>
             </div>
         `;
-
         stage.appendChild(container);
         
         container.style.display = 'block';
@@ -659,18 +786,32 @@
 
     function checkDrawComplete() {
         if (flippedCount === drawnCards.length) {
-            setTimeout(() => {
-                document.getElementById('action-buttons').classList.remove('hidden');
-            }, 500);
+            setTimeout(() => { document.getElementById('action-buttons').classList.remove('hidden'); }, 500);
         }
     }
 
+    function showFloatingText(element, text) {
+        const rect = element.getBoundingClientRect();
+        const floater = document.createElement('div');
+        floater.className = 'float-text';
+        floater.innerText = text;
+        floater.style.left = (rect.left + rect.width / 2) + 'px';
+        floater.style.top = rect.top + 'px';
+        floater.style.transform = 'translate(-50%, -50%)';
+        document.body.appendChild(floater);
+
+        void floater.offsetWidth;
+        floater.style.top = (rect.top - 40) + 'px';
+        floater.style.opacity = '0';
+        setTimeout(() => floater.remove(), 1000);
+    }
+
     function flipCard(event, el, type, id) {
-        if (event) event.stopPropagation(); // 阻止冒泡到 stage 觸發全部翻開
+        if (event) event.stopPropagation();
 
         if(el.classList.contains('is-flipped')) {
             if (flippedCount < drawnCards.length) {
-                flipAllRemaining(); // 若還有未翻開的，點擊已翻開卡牌視同翻開全部
+                flipAllRemaining();
             } else {
                 openFullscreen(type, id);
             }
@@ -683,18 +824,21 @@
 
         if(!currentCollectionData[type].includes(id)) {
             currentCollectionData[type].push(id);
-            saveUserCollection();
+            saveUserData();
+        } else {
+            if (currentCollectionData.diamonds < 999) {
+                currentCollectionData.diamonds = Math.min(999, currentCollectionData.diamonds + 1);
+                updateDiamondUI();
+                saveUserData();
+                showFloatingText(el, "+1 💎");
+            }
         }
     }
 
     function flipAllRemaining() {
         if (drawnCards.length === 0 || flippedCount >= drawnCards.length) return;
         const unflipped = document.querySelectorAll('.card-inner:not(.is-flipped)');
-        unflipped.forEach((card, index) => {
-            setTimeout(() => {
-                card.click();
-            }, index * 100); 
-        });
+        unflipped.forEach((card, index) => { setTimeout(() => { card.click(); }, index * 100); });
     }
 
     function openFullscreen(type, id) {
@@ -703,11 +847,11 @@
         const img = document.getElementById('fullscreen-card-img');
         
         img.src = imgSrc;
-        
         if (isCurrentDrawGodPack) {
             img.style.boxShadow = 'var(--platinum-glow)';
         } else {
-            if (type === 'super_rare') img.style.boxShadow = 'var(--gold-glow)';
+            if (type === 'special_limited') img.style.boxShadow = 'var(--red-glow)';
+            else if (type === 'super_rare') img.style.boxShadow = 'var(--gold-glow)';
             else if (type === 'rare') img.style.boxShadow = 'var(--purple-glow)';
             else img.style.boxShadow = 'var(--blue-glow)';
         }
@@ -732,25 +876,18 @@
         const hint = document.getElementById('save-hint');
         
         try {
-            hint.innerText = "下載中...";
-            hint.style.opacity = '1';
-
+            hint.innerText = "下載中..."; hint.style.opacity = '1';
             const response = await fetch(imgSrc);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
-            
             const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
+            a.style.display = 'none'; a.href = url;
             
             const filename = imgSrc.split('/').pop() || 'porkemon_card.png';
             a.download = 'Porkemon_' + filename;
             
-            document.body.appendChild(a);
-            a.click();
-            
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            document.body.appendChild(a); a.click();
+            window.URL.revokeObjectURL(url); document.body.removeChild(a);
 
             hint.innerText = "下載完成！";
             setTimeout(() => hint.style.opacity = '0', 2000);
@@ -762,86 +899,92 @@
     }
 
     async function resetCollection() {
-        if(confirm(`確定要重置 ${currentUser} 的收藏嗎？此操作無法還原並會同步至資料庫。`)) {
-            currentCollectionData = { common: [], rare: [], super_rare: [] };
+        if(confirm(`確定要重置 ${currentUser} 的收藏與鑽石嗎？此操作無法還原。`)) {
+            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 60 };
+            lastLoginDate = new Date().toISOString();
             updateCollectionUI(); 
-            await saveUserCollection();
+            updateDiamondUI();
+            await saveUserData();
+            alert("已重置並發放初始 60 💎");
+        }
+    }
+
+    // ==========================================
+    // 6. 收藏系統渲染 (頂部導航模式)
+    // ==========================================
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
+        
+        document.getElementById(`btn-${tabId}`).classList.add('active');
+        document.getElementById(`sec-${tabId}`).classList.add('active');
+    }
+
+    function buildGridHTML(type, total, ownedList) {
+        let html = `<div class="collection-group-title">${getTabName(type)} (${ownedList.length}/${total})</div>`;
+        html += `<div class="collection-grid">`;
+        for(let i=1; i<=total; i++) {
+            const id = i.toString().padStart(3, '0');
+            const isOwned = ownedList.includes(id);
+            const imgSrc = isOwned ? `${BASE_URL}cards_${type}/${id}.PNG` : IMG_BACK;
+            const clickAction = isOwned ? `onclick="openFullscreen('${type}', '${id}')" style="cursor:pointer;"` : '';
+            html += `<div class="card-slot" ${clickAction}><img src="${imgSrc}" alt="${type} ${id}"></div>`;
+        }
+        html += `</div>`;
+        return html;
+    }
+
+    function getTabName(type) {
+        switch(type) {
+            case 'special_limited': return '特別限定';
+            case 'super_rare': return '超級稀有';
+            case 'rare': return '稀有';
+            case 'common': return '普通';
+            default: return type;
         }
     }
 
     function updateCollectionUI() {
+        const tabNav = document.getElementById('collection-tabs');
         const content = document.getElementById('collection-content');
-        let data = currentCollectionData || { common: [], rare: [], super_rare: [] };
+        let data = currentCollectionData || { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 };
+        
+        tabNav.innerHTML = "";
         content.innerHTML = "";
 
-        const srTitle = document.createElement('div');
-        srTitle.className = 'collection-group-title';
-        srTitle.innerText = `超級稀有卡 (${data.super_rare.length}/${TOTAL_SUPER_RARE})`;
-        content.appendChild(srTitle);
-        
-        const srGrid = document.createElement('div');
-        srGrid.className = 'collection-grid';
-        for(let i=1; i<=TOTAL_SUPER_RARE; i++) {
-            const id = i.toString().padStart(3, '0');
-            const isOwned = data.super_rare.includes(id);
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            const imgSrc = isOwned ? `${BASE_URL}cards_super_rare/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Super Rare ${id}">`;
-            
-            if(isOwned) {
-                slot.onclick = () => openFullscreen('super_rare', id);
-                slot.style.cursor = 'pointer';
-            }
-            srGrid.appendChild(slot);
-        }
-        content.appendChild(srGrid);
+        const tabs = [
+            { id: 'special_limited', total: TOTAL_SPECIAL_LIMITED, list: data.special_limited, label: '特別限定' },
+            { id: 'super_rare', total: TOTAL_SUPER_RARE, list: data.super_rare, label: '超級稀有' },
+            { id: 'rare', total: TOTAL_RARE, list: data.rare, label: '稀有' },
+            { id: 'common', total: TOTAL_COMMON, list: data.common, label: '普通' }
+        ];
 
-        const rareTitle = document.createElement('div');
-        rareTitle.className = 'collection-group-title';
-        rareTitle.innerText = `稀有卡 (${data.rare.length}/${TOTAL_RARE})`;
-        content.appendChild(rareTitle);
-        
-        const rareGrid = document.createElement('div');
-        rareGrid.className = 'collection-grid';
-        for(let i=1; i<=TOTAL_RARE; i++) {
-            const id = i.toString().padStart(3, '0');
-            const isOwned = data.rare.includes(id);
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            const imgSrc = isOwned ? `${BASE_URL}cards_rare/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Rare ${id}">`;
-            
-            if(isOwned) {
-                slot.onclick = () => openFullscreen('rare', id);
-                slot.style.cursor = 'pointer';
-            }
-            rareGrid.appendChild(slot);
-        }
-        content.appendChild(rareGrid);
+        let firstAvailableTab = null;
 
-        const commonTitle = document.createElement('div');
-        commonTitle.className = 'collection-group-title';
-        commonTitle.innerText = `普通卡 (${data.common.length}/${TOTAL_COMMON})`;
-        content.appendChild(commonTitle);
-        
-        const commonGrid = document.createElement('div');
-        commonGrid.className = 'collection-grid';
-        for(let i=1; i<=TOTAL_COMMON; i++) {
-            const id = i.toString().padStart(3, '0');
-            const isOwned = data.common.includes(id);
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            const imgSrc = isOwned ? `${BASE_URL}cards_common/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Common ${id}">`;
-            
-            if(isOwned) {
-                slot.onclick = () => openFullscreen('common', id);
-                slot.style.cursor = 'pointer';
+        tabs.forEach(tab => {
+            if (tab.total > 0) {
+                if (!firstAvailableTab) firstAvailableTab = tab.id;
+
+                // 建立 Tab 按鈕
+                const btn = document.createElement('div');
+                btn.className = 'tab-btn';
+                btn.id = `btn-${tab.id}`;
+                btn.innerText = tab.label;
+                btn.onclick = () => switchTab(tab.id);
+                tabNav.appendChild(btn);
+
+                // 建立內容區塊
+                const section = document.createElement('div');
+                section.className = 'tab-section';
+                section.id = `sec-${tab.id}`;
+                section.innerHTML = buildGridHTML(tab.id, tab.total, tab.list);
+                content.appendChild(section);
             }
-            commonGrid.appendChild(slot);
+        });
+
+        if (firstAvailableTab) {
+            switchTab(firstAvailableTab);
         }
-        content.appendChild(commonGrid);
     }
 </script>
 </body>
