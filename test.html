@@ -8,11 +8,11 @@
     <style>
         :root {
             /* 光環顏色定義 */
-            --blue-glow: 0 0 20px #0055ff, 0 0 40px #00aaff, 0 0 80px #88ddff; /* 普通 */
-            --purple-glow: 0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0; /* 稀有 */
-            --gold-glow: 0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800; /* 超級稀有 */
-            --red-glow: 0 0 20px #ff0000, 0 0 40px #ff4444, 0 0 80px #ff8888; /* 特別限定 */
-            --platinum-glow: 0 0 20px #ffffff, 0 0 40px #e5e4e2, 0 0 80px #fffafa, 0 0 100px #ffffff; /* God Pack 白金 */
+            --blue-glow: 0 0 20px #0055ff, 0 0 40px #00aaff, 0 0 80px #88ddff;
+            --purple-glow: 0 0 20px #a020f0, 0 0 40px #c020f0, 0 0 80px #e020f0;
+            --gold-glow: 0 0 20px #ffd700, 0 0 40px #ffaa00, 0 0 80px #ff8800;
+            --red-glow: 0 0 20px #ff0000, 0 0 40px #ff4444, 0 0 80px #ff8888;
+            --platinum-glow: 0 0 20px #ffffff, 0 0 40px #e5e4e2, 0 0 80px #fffafa, 0 0 100px #ffffff;
         }
 
         body, html {
@@ -74,10 +74,10 @@
 
         /* 切開動畫與包裝容器 */
         .pack-wrapper {
-            position: absolute; bottom: -100%; height: 70vh; aspect-ratio: 75 / 120; 
+            position: absolute; bottom: -100%; height: 60vh; max-height: 500px; aspect-ratio: 75 / 120; 
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
-        .pack-wrapper.active { bottom: 15%; pointer-events: auto; }
+        .pack-wrapper.active { bottom: 25%; pointer-events: auto; }
         
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -92,10 +92,10 @@
 
         /* 3D 翻轉卡片容器 */
         .card-container {
-            position: absolute; width: 50vh; max-width: 280px; aspect-ratio: 63/88; 
+            position: absolute; width: 45vh; max-width: 250px; aspect-ratio: 63/88; 
             perspective: 1000px; display: none; z-index: 100; opacity: 0;
             transition: opacity 1s ease-out, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform: translate(-50%, calc(-50% + 100px)) scale(0.5); 
+            transform: translate(-50%, calc(-50% + 50px)) scale(0.5); 
             transform-origin: center center; pointer-events: auto; cursor: pointer;
         }
         .card-container.reveal { opacity: 1; transform: translate(var(--tx, -50%), var(--ty, -50%)) scale(var(--tscale, 1)); }
@@ -110,28 +110,78 @@
         .card-front { transform: rotateY(180deg); }
         .is-flipped { transform: rotateY(180deg); }
 
-        /* 底部導航 & 共用 Pill 形按鈕 */
-        .bottom-nav { position: absolute; bottom: 40px; display: flex; gap: 20px; pointer-events: auto; z-index: 250; }
-        .draw-btn { background: #fff; color: #000; border: none; padding: 12px 20px; font-size: 18px; font-weight: bold; border-radius: 50px; cursor: pointer; white-space: nowrap; }
+        /* 底部導航 & 共用 Pill 形按鈕 - 修改為置中且不超出螢幕 */
+        .bottom-nav { 
+            position: absolute; 
+            bottom: 20px; 
+            width: 90%;
+            max-width: 400px;
+            display: flex; 
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px; 
+            pointer-events: auto; 
+            z-index: 250; 
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        .draw-btn { 
+            background: #fff; 
+            color: #000; 
+            border: none; 
+            padding: 10px 5px; 
+            font-size: 14px; 
+            font-weight: bold; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            white-space: nowrap; 
+            flex: 1;
+            text-align: center;
+            min-width: 0; /* 防止超出 */
+        }
         
         .pill-btn {
             background: transparent; color: #fff; border: 2px solid #fff; border-radius: 50px;
-            padding: 10px 30px; font-size: 18px; font-weight: bold; cursor: pointer; pointer-events: auto;
+            padding: 8px 20px; font-size: 16px; font-weight: bold; cursor: pointer; pointer-events: auto;
         }
 
         /* 收藏頁面 */
-        #collection-screen { justify-content: flex-start; padding-top: 30px; overflow: hidden; box-sizing: border-box; }
-        .collection-header { padding: 10px 20px; text-align: center; width: 100%; flex-shrink: 0; pointer-events: auto; }
-        .collection-controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; }
+        #collection-screen { justify-content: flex-start; padding-top: 20px; overflow: hidden; box-sizing: border-box; }
+        .collection-header { padding: 5px 10px; text-align: center; width: 100%; flex-shrink: 0; pointer-events: auto; }
+        .collection-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 15px; }
         
-        #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: 50px; -webkit-overflow-scrolling: touch; }
+        /* 頂部導航分頁 */
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            padding: 0 10px;
+        }
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background: white;
+            color: black;
+            font-weight: bold;
+        }
+
+        #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
         
-        .collection-group-title { text-align: center; font-size: 22px; font-weight: bold; margin: 20px 0 15px; color: #fff; }
-        .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
+        .collection-group-title { text-align: center; font-size: 18px; font-weight: bold; margin: 10px 0; color: #fff; }
+        .collection-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 15px; }
         
         .card-slot { width: 100%; aspect-ratio: 63/88; background: #222; border-radius: 5px; overflow: hidden; position: relative; }
         .card-slot img { width: 100%; height: 100%; object-fit: fill; }
-        .card-qty { position: absolute; bottom: 2px; right: 4px; font-size: 12px; font-weight: bold; color: #fff; text-shadow: 1px 1px 2px #000; }
 
         /* 全螢幕放大預覽 */
         #fullscreen-overlay {
@@ -142,19 +192,23 @@
         #fullscreen-overlay.active { opacity: 1; pointer-events: auto; }
         
         #fullscreen-card-img {
-            height: 65vh; max-height: 800px; aspect-ratio: 63/88; border-radius: 12px;
+            height: 60vh; max-height: 600px; aspect-ratio: 63/88; border-radius: 12px;
             object-fit: fill; -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; pointer-events: auto;
         }
 
-        .long-press-hint { color: #fff; margin-top: 15px; font-size: 18px; font-weight: bold; text-align: center; letter-spacing: 1px; }
-        #save-hint { color: #fff; margin-top: 5px; font-size: 16px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; height: 20px; }
-        .overlay-controls { margin-top: 15px; display: flex; gap: 20px; pointer-events: auto; }
+        .long-press-hint { color: #fff; margin-top: 15px; font-size: 16px; font-weight: bold; text-align: center; letter-spacing: 1px; }
+        #save-hint { color: #fff; margin-top: 5px; font-size: 14px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; height: 20px; }
+        .overlay-controls { margin-top: 10px; display: flex; gap: 15px; pointer-events: auto; }
         
         /* 浮動加鑽動畫 */
         .float-text {
             position: fixed; color: #00ffff; font-weight: bold; font-size: 24px; text-shadow: 0 0 5px #000;
             z-index: 1000; pointer-events: none; transition: all 1s ease-out; opacity: 1;
         }
+        
+        .tab-section { display: none; }
+        .tab-section.active { display: block; }
+
     </style>
 </head>
 <body>
@@ -167,7 +221,7 @@
         <div class="select-wrapper">
             <input type="text" id="username-input" placeholder="請輸入玩家名稱" autocomplete="off" />
         </div>
-        <button id="btn-enter">開始抽卡</button>
+        <button id="btn-enter">進入卡池</button>
     </section>
 
     <section id="main-screen" class="screen hidden">
@@ -183,8 +237,8 @@
         </div>
         
         <div class="bottom-nav hidden" id="action-buttons">
-            <button class="draw-btn" onclick="prepareDraw(1)">單抽 (3 💎)</button>
-            <button class="draw-btn" onclick="prepareDraw(10)">十連抽 (27 💎)</button>
+            <button class="draw-btn" onclick="prepareDraw(1)">單抽 3💎</button>
+            <button class="draw-btn" onclick="prepareDraw(10)">十連 27💎</button>
             <button class="draw-btn" style="background:none; color:white; border:1px solid white;" onclick="showScreen('collection-screen')">收藏</button>
         </div>
     </section>
@@ -193,11 +247,16 @@
         <div class="collection-header">
             <div class="collection-controls">
                 <button class="pill-btn" onclick="showScreen('main-screen')">返回</button>
-                <button class="pill-btn" onclick="resetCollection()">重置</button>
+                <h2 id="user-title" style="margin: 0; font-size: 18px;"></h2>
+                <button class="pill-btn" onclick="resetCollection()" style="border-color: #ff4444; color: #ff4444;">重置</button>
             </div>
-            <h2 id="user-title" style="margin: 10px 0 0 0;"></h2>
+            <div class="tab-nav" id="collection-tabs">
+                <!-- Tabs will be generated here -->
+            </div>
         </div>
-        <div id="collection-content"></div>
+        <div id="collection-content">
+            <!-- Content will be generated here -->
+        </div>
     </section>
 </div>
 
@@ -222,13 +281,13 @@
     const TOTAL_COMMON = 28;
     const TOTAL_RARE = 16;
     const TOTAL_SUPER_RARE = 9;
-    const TOTAL_SPECIAL_LIMITED = 5; // 可自行設定特別限定總數
+    const TOTAL_SPECIAL_LIMITED = 5; 
 
-    const EVENT_ACTIVE = true; // 特別限定卡池開關
+    const EVENT_ACTIVE = true; 
 
     let currentUser = "";
-    let currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [] }; 
-    let diamonds = 0;
+    // 將 diamonds 移入 collection JSON 中
+    let currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 }; 
     let lastLoginDate = null;
     
     let drawnCards = [];
@@ -238,7 +297,7 @@
     let isCurrentDrawGodPack = false;
 
     // ==========================================
-    // 本地記憶初始化
+    // 本地記憶初始化 (僅玩家名稱)
     // ==========================================
     window.onload = () => {
         const savedName = localStorage.getItem('porkemon_username');
@@ -355,13 +414,26 @@
     }
 
     // ==========================================
-    // 4. 每日重置與 UI 邏輯
+    // 4. 資料庫邏輯與 UI 更新
     // ==========================================
+    function giveInitialDiamondsIfNeeded() {
+        if (!currentCollectionData.diamonds) {
+            currentCollectionData.diamonds = 0;
+        }
+        // 如果是新玩家（首次登入），直接給予 20 鑽石
+        if (!lastLoginDate) {
+            currentCollectionData.diamonds = 20;
+            lastLoginDate = new Date().toISOString();
+            setTimeout(() => { alert("🎉 歡迎新玩家！已發放初始 20 💎"); }, 200);
+            return true;
+        }
+        return false;
+    }
+
     function checkDailyReset() {
         const now = new Date();
         const baseline = new Date(now);
         
-        // 判斷是否過今日 08:00
         if (now.getHours() >= 8) {
             baseline.setHours(8, 0, 0, 0);
         } else {
@@ -371,9 +443,9 @@
 
         const lastLogin = lastLoginDate ? new Date(lastLoginDate) : new Date(0);
         
-        if (lastLogin < baseline) {
-            diamonds += 20;
-            if (diamonds > 999) diamonds = 999;
+        if (lastLogin < baseline && lastLoginDate !== null) { // 確保不是新玩家
+            currentCollectionData.diamonds = (currentCollectionData.diamonds || 0) + 20;
+            if (currentCollectionData.diamonds > 999) currentCollectionData.diamonds = 999;
             lastLoginDate = now.toISOString();
             setTimeout(() => { alert("🎉 每日登入獎勵！已領取 20 💎"); }, 200);
             return true;
@@ -383,7 +455,7 @@
 
     function updateDiamondUI() {
         document.getElementById('display-username').innerText = currentUser;
-        document.getElementById('display-diamonds').innerText = diamonds;
+        document.getElementById('display-diamonds').innerText = currentCollectionData.diamonds || 0;
     }
 
     function showScreen(id) {
@@ -419,42 +491,51 @@
 
         try {
             if (!supabaseClient) throw new Error("資料庫模組未能啟動。");
+            
+            // 從 Supabase 讀取資料
             const { data, error } = await supabaseClient
                 .from('user_collections')
                 .select('*')
                 .eq('username', currentUser)
                 .maybeSingle();
+            
             if (error) throw error;
 
-            if (data) {
-                currentCollectionData = data.collection || { common: [], rare: [], super_rare: [], special_limited: [] };
-                diamonds = data.diamonds || 0;
-                lastLoginDate = data.last_login_date || null;
+            if (data && data.collection) {
+                currentCollectionData = data.collection;
             } else {
-                currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [] };
-                diamonds = 0;
-                lastLoginDate = null;
+                currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 };
             }
+            
+            // 嘗試從舊的獨立欄位讀取日期
+            lastLoginDate = data ? data.last_login_date : null;
 
             // 防護結構
             if(!currentCollectionData.special_limited) currentCollectionData.special_limited = [];
             if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
             if(!currentCollectionData.rare) currentCollectionData.rare = [];
             if(!currentCollectionData.common) currentCollectionData.common = [];
+            if(typeof currentCollectionData.diamonds === 'undefined') currentCollectionData.diamonds = 0;
 
-            let isUpdated = checkDailyReset();
+            let isInitial = giveInitialDiamondsIfNeeded();
+            let isUpdated = false;
+            
+            if (!isInitial) {
+                isUpdated = checkDailyReset();
+            }
+
             updateDiamondUI();
 
-            if (!data || isUpdated) {
+            // 若有變更則同步至雲端
+            if (!data || isInitial || isUpdated) {
                 await saveUserData();
             }
 
         } catch (err) {
             console.error("Supabase 發生例外狀況:", err);
             alert("雲端同步異常...\n\n自動啟用「單機離線模式」。");
-            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [] };
-            diamonds = 0;
-            checkDailyReset();
+            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 20 };
+            lastLoginDate = new Date().toISOString();
             updateDiamondUI();
         } finally {
             gameState = 'drawing';
@@ -472,7 +553,6 @@
                 .upsert({ 
                     username: currentUser,
                     collection: currentCollectionData, 
-                    diamonds: diamonds,
                     last_login_date: lastLoginDate,
                     updated_at: new Date().toISOString() 
                 });
@@ -486,12 +566,12 @@
     // ==========================================
     function prepareDraw(num) {
         const cost = num === 1 ? 3 : 27;
-        if (diamonds < cost) {
+        if (currentCollectionData.diamonds < cost) {
             alert("💎 鑽石不足！\n每日 08:00 重置將發放 20 💎");
             return;
         }
 
-        diamonds -= cost;
+        currentCollectionData.diamonds -= cost;
         updateDiamondUI();
         saveUserData();
 
@@ -552,7 +632,6 @@
                 drawnCards.push({type: cardType, id: cardId, isGodPack: false});
             }
 
-            // 十連保底機制：若 10 張全為 Common，強制替換最後一張為 Rare
             if (num === 10) {
                 let hasRareOrAbove = drawnCards.some(c => c.type !== 'common');
                 if (!hasRareOrAbove) {
@@ -562,7 +641,6 @@
             }
         }
 
-        // 建立封包動畫
         for(let i=0; i<num; i++) {
             const wrap = document.createElement('div');
             wrap.className = 'pack-wrapper';
@@ -653,14 +731,14 @@
         let tx = '-50%', ty = '-50%', tscale = '1';
 
         if(drawnCards.length > 1) { 
-            container.style.width = '22vw';
-            container.style.maxWidth = '90px';
-            tscale = '0.85'; 
+            container.style.width = '20vw';
+            container.style.maxWidth = '80px';
+            tscale = '0.9'; 
 
             let x, y;
-            if (idx < 3) { y = '25%'; x = `${18 + idx * 32}%`; } 
-            else if (idx < 7) { y = '50%'; x = `${16 + (idx - 3) * 22.66}%`; } 
-            else { y = '75%'; x = `${18 + (idx - 7) * 32}%`; }
+            if (idx < 3) { y = '30%'; x = `${20 + idx * 30}%`; } 
+            else if (idx < 7) { y = '55%'; x = `${15 + (idx - 3) * 23.33}%`; } 
+            else { y = '80%'; x = `${20 + (idx - 7) * 30}%`; }
             
             container.style.left = x; container.style.top = y;
         } else {
@@ -711,7 +789,7 @@
         floater.style.transform = 'translate(-50%, -50%)';
         document.body.appendChild(floater);
 
-        void floater.offsetWidth; // Force reflow
+        void floater.offsetWidth;
         floater.style.top = (rect.top - 40) + 'px';
         floater.style.opacity = '0';
         setTimeout(() => floater.remove(), 1000);
@@ -737,9 +815,8 @@
             currentCollectionData[type].push(id);
             saveUserData();
         } else {
-            // 重複卡轉換 1 鑽石
-            if (diamonds < 999) {
-                diamonds = Math.min(999, diamonds + 1);
+            if (currentCollectionData.diamonds < 999) {
+                currentCollectionData.diamonds = Math.min(999, currentCollectionData.diamonds + 1);
                 updateDiamondUI();
                 saveUserData();
                 showFloatingText(el, "+1 💎");
@@ -812,103 +889,91 @@
 
     async function resetCollection() {
         if(confirm(`確定要重置 ${currentUser} 的收藏與鑽石嗎？此操作無法還原。`)) {
-            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [] };
-            diamonds = 0;
+            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 20 };
+            lastLoginDate = new Date().toISOString();
             updateCollectionUI(); 
             updateDiamondUI();
             await saveUserData();
+            alert("已重置並發放初始 20 💎");
         }
     }
 
     // ==========================================
-    // 6. 收藏系統渲染
+    // 6. 收藏系統渲染 (頂部導航模式)
     // ==========================================
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
+        
+        document.getElementById(`btn-${tabId}`).classList.add('active');
+        document.getElementById(`sec-${tabId}`).classList.add('active');
+    }
+
+    function buildGridHTML(type, total, ownedList) {
+        let html = `<div class="collection-group-title">${getTabName(type)} (${ownedList.length}/${total})</div>`;
+        html += `<div class="collection-grid">`;
+        for(let i=1; i<=total; i++) {
+            const id = i.toString().padStart(3, '0');
+            const isOwned = ownedList.includes(id);
+            const imgSrc = isOwned ? `${BASE_URL}cards_${type}/${id}.PNG` : IMG_BACK;
+            const clickAction = isOwned ? `onclick="openFullscreen('${type}', '${id}')" style="cursor:pointer;"` : '';
+            html += `<div class="card-slot" ${clickAction}><img src="${imgSrc}" alt="${type} ${id}"></div>`;
+        }
+        html += `</div>`;
+        return html;
+    }
+
+    function getTabName(type) {
+        switch(type) {
+            case 'special_limited': return '特別限定';
+            case 'super_rare': return '超級稀有';
+            case 'rare': return '稀有';
+            case 'common': return '普通';
+            default: return type;
+        }
+    }
+
     function updateCollectionUI() {
+        const tabNav = document.getElementById('collection-tabs');
         const content = document.getElementById('collection-content');
-        let data = currentCollectionData || { common: [], rare: [], super_rare: [], special_limited: [] };
+        let data = currentCollectionData || { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 };
+        
+        tabNav.innerHTML = "";
         content.innerHTML = "";
 
-        // 特別限定 (Special Limited)
-        if (TOTAL_SPECIAL_LIMITED > 0) {
-            const spTitle = document.createElement('div');
-            spTitle.className = 'collection-group-title';
-            spTitle.innerText = `特別限定 (${data.special_limited.length}/${TOTAL_SPECIAL_LIMITED})`;
-            content.appendChild(spTitle);
-            
-            const spGrid = document.createElement('div');
-            spGrid.className = 'collection-grid';
-            for(let i=1; i<=TOTAL_SPECIAL_LIMITED; i++) {
-                const id = i.toString().padStart(3, '0');
-                const isOwned = data.special_limited.includes(id);
-                const slot = document.createElement('div');
-                slot.className = 'card-slot';
-                const imgSrc = isOwned ? `${BASE_URL}cards_special_limited/${id}.PNG` : IMG_BACK;
-                slot.innerHTML = `<img src="${imgSrc}" alt="Special ${id}">`;
-                if(isOwned) { slot.onclick = () => openFullscreen('special_limited', id); slot.style.cursor = 'pointer'; }
-                spGrid.appendChild(slot);
+        const tabs = [
+            { id: 'special_limited', total: TOTAL_SPECIAL_LIMITED, list: data.special_limited, label: '特別限定' },
+            { id: 'super_rare', total: TOTAL_SUPER_RARE, list: data.super_rare, label: '超級稀有' },
+            { id: 'rare', total: TOTAL_RARE, list: data.rare, label: '稀有' },
+            { id: 'common', total: TOTAL_COMMON, list: data.common, label: '普通' }
+        ];
+
+        let firstAvailableTab = null;
+
+        tabs.forEach(tab => {
+            if (tab.total > 0) {
+                if (!firstAvailableTab) firstAvailableTab = tab.id;
+
+                // 建立 Tab 按鈕
+                const btn = document.createElement('div');
+                btn.className = 'tab-btn';
+                btn.id = `btn-${tab.id}`;
+                btn.innerText = tab.label;
+                btn.onclick = () => switchTab(tab.id);
+                tabNav.appendChild(btn);
+
+                // 建立內容區塊
+                const section = document.createElement('div');
+                section.className = 'tab-section';
+                section.id = `sec-${tab.id}`;
+                section.innerHTML = buildGridHTML(tab.id, tab.total, tab.list);
+                content.appendChild(section);
             }
-            content.appendChild(spGrid);
-        }
+        });
 
-        // 超級稀有 (Super Rare)
-        const srTitle = document.createElement('div');
-        srTitle.className = 'collection-group-title';
-        srTitle.innerText = `超級稀有 (${data.super_rare.length}/${TOTAL_SUPER_RARE})`;
-        content.appendChild(srTitle);
-        
-        const srGrid = document.createElement('div');
-        srGrid.className = 'collection-grid';
-        for(let i=1; i<=TOTAL_SUPER_RARE; i++) {
-            const id = i.toString().padStart(3, '0');
-            const isOwned = data.super_rare.includes(id);
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            const imgSrc = isOwned ? `${BASE_URL}cards_super_rare/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Super Rare ${id}">`;
-            if(isOwned) { slot.onclick = () => openFullscreen('super_rare', id); slot.style.cursor = 'pointer'; }
-            srGrid.appendChild(slot);
+        if (firstAvailableTab) {
+            switchTab(firstAvailableTab);
         }
-        content.appendChild(srGrid);
-
-        // 稀有 (Rare)
-        const rareTitle = document.createElement('div');
-        rareTitle.className = 'collection-group-title';
-        rareTitle.innerText = `稀有 (${data.rare.length}/${TOTAL_RARE})`;
-        content.appendChild(rareTitle);
-        
-        const rareGrid = document.createElement('div');
-        rareGrid.className = 'collection-grid';
-        for(let i=1; i<=TOTAL_RARE; i++) {
-            const id = i.toString().padStart(3, '0');
-            const isOwned = data.rare.includes(id);
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            const imgSrc = isOwned ? `${BASE_URL}cards_rare/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Rare ${id}">`;
-            if(isOwned) { slot.onclick = () => openFullscreen('rare', id); slot.style.cursor = 'pointer'; }
-            rareGrid.appendChild(slot);
-        }
-        content.appendChild(rareGrid);
-
-        // 普通 (Common)
-        const commonTitle = document.createElement('div');
-        commonTitle.className = 'collection-group-title';
-        commonTitle.innerText = `普通 (${data.common.length}/${TOTAL_COMMON})`;
-        content.appendChild(commonTitle);
-        
-        const commonGrid = document.createElement('div');
-        commonGrid.className = 'collection-grid';
-        for(let i=1; i<=TOTAL_COMMON; i++) {
-            const id = i.toString().padStart(3, '0');
-            const isOwned = data.common.includes(id);
-            const slot = document.createElement('div');
-            slot.className = 'card-slot';
-            const imgSrc = isOwned ? `${BASE_URL}cards_common/${id}.PNG` : IMG_BACK;
-            slot.innerHTML = `<img src="${imgSrc}" alt="Common ${id}">`;
-            if(isOwned) { slot.onclick = () => openFullscreen('common', id); slot.style.cursor = 'pointer'; }
-            commonGrid.appendChild(slot);
-        }
-        content.appendChild(commonGrid);
     }
 </script>
 </body>
