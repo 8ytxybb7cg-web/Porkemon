@@ -81,15 +81,15 @@
          * Width   : 90% of pack width + left nub (–6px overhang)
          *           so right edge ends at 90% of pack
          * Colour  : #961D14 @ 85% opacity
-         * Text    : white ">>> tear here 在此撕開 >>>" centred
+         * Text    : white ">>> Tear here 在此撕開 >>>" centred
          *
          * transform-origin left center so drag pulls from left nub.
          * ──────────────────────────────────────────────────────── */
         .tear-strip {
             position:absolute;
-            top:10px;
+            top:100px;
             left:-6px;
-            width:calc(90% + 10px);          /* right edge at 90% pack width */
+            width:calc(90% +20px);          /* right edge at 90% pack width */
             height:3%;                       /* ≈ 1/5 of old 15% */
             min-height:10px;                 /* ensure visibility on small screens */
             background:rgba(150,29,20,0.85); /* #961D14 @ 85% */
@@ -137,7 +137,7 @@
          * ──────────────────────────────────────────────────────── */
         .pack-tear-gap {
             position:absolute;
-            top:10px; left:0;
+            top:100px; left:0;
             width:95%;
             height:3%;
             min-height:10px;
