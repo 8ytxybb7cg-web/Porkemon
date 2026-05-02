@@ -72,12 +72,12 @@
         /* 抽卡舞台 */
         #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: auto; }
 
-        /* 切開動畫與包裝容器 */
+        /* 切開動畫與包裝容器 (已調整大小與位置避免重疊) */
         .pack-wrapper {
-            position: absolute; bottom: -100%; height: 60vh; max-height: 500px; aspect-ratio: 75 / 120; 
+            position: absolute; bottom: -100%; height: 70vh; max-height: 600px; max-width: 85vw; aspect-ratio: 75 / 120; 
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
-        .pack-wrapper.active { bottom: 25%; pointer-events: auto; }
+        .pack-wrapper.active { bottom: 10%; pointer-events: auto; }
         
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -110,7 +110,7 @@
         .card-front { transform: rotateY(180deg); }
         .is-flipped { transform: rotateY(180deg); }
 
-        /* 底部導航 & 共用 Pill 形按鈕 - 修改為置中且不超出螢幕 */
+        /* 底部導航 & 共用 Pill 形按鈕 */
         .bottom-nav { 
             position: absolute; 
             bottom: 20px; 
@@ -137,7 +137,7 @@
             white-space: nowrap; 
             flex: 1;
             text-align: center;
-            min-width: 0; /* 防止超出 */
+            min-width: 0; 
         }
         
         .pill-btn {
@@ -178,7 +178,8 @@
         #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
         
         .collection-group-title { text-align: center; font-size: 18px; font-weight: bold; margin: 10px 0; color: #fff; }
-        .collection-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 15px; }
+        /* 收藏頁卡牌改為一行 3 張 */
+        .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 15px; }
         
         .card-slot { width: 100%; aspect-ratio: 63/88; background: #222; border-radius: 5px; overflow: hidden; position: relative; }
         .card-slot img { width: 100%; height: 100%; object-fit: fill; }
@@ -286,7 +287,6 @@
     const EVENT_ACTIVE = true; 
 
     let currentUser = "";
-    // 將 diamonds 移入 collection JSON 中
     let currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 }; 
     let lastLoginDate = null;
     
@@ -424,6 +424,7 @@
         if (!lastLoginDate) {
             currentCollectionData.diamonds = 60;
             lastLoginDate = new Date().toISOString();
+            currentCollectionData.lastLoginDate = lastLoginDate; // 同步寫入 JSON 防止遺失
             setTimeout(() => { alert("🎉 歡迎新玩家！已發放初始 60 💎"); }, 200);
             return true;
         }
@@ -448,6 +449,7 @@
             currentCollectionData.diamonds = (currentCollectionData.diamonds || 0) + 30;
             if (currentCollectionData.diamonds > 999) currentCollectionData.diamonds = 999;
             lastLoginDate = now.toISOString();
+            currentCollectionData.lastLoginDate = lastLoginDate; // 同步寫入 JSON 防止遺失
             setTimeout(() => { alert("🎉 每日登入獎勵！已領取 30 💎"); }, 200);
             return true;
         }
@@ -502,21 +504,24 @@
             
             if (error) throw error;
 
-            if (data && data.collection) {
-                currentCollectionData = data.collection;
+            if (data) {
+                // 已存在玩家
+                currentCollectionData = data.collection || { common: [], rare: [], super_rare: [], special_limited: [] };
+                // 讀取資料庫真實的鑽石數量
+                currentCollectionData.diamonds = data.diamonds !== null && data.diamonds !== undefined ? data.diamonds : (currentCollectionData.diamonds || 0);
+                // 優先從 JSON 中獲取最後登入時間
+                lastLoginDate = currentCollectionData.lastLoginDate || null;
             } else {
+                // 新玩家
                 currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 };
+                lastLoginDate = null;
             }
-            
-            // 嘗試從舊的獨立欄位讀取日期
-            lastLoginDate = data ? data.last_login_date : null;
 
             // 防護結構
             if(!currentCollectionData.special_limited) currentCollectionData.special_limited = [];
             if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
             if(!currentCollectionData.rare) currentCollectionData.rare = [];
             if(!currentCollectionData.common) currentCollectionData.common = [];
-            if(typeof currentCollectionData.diamonds === 'undefined') currentCollectionData.diamonds = 0;
 
             let isInitial = giveInitialDiamondsIfNeeded();
             let isUpdated = false;
@@ -548,14 +553,18 @@
 
     async function saveUserData() {
         if (!supabaseClient) return;
+        
+        // 將登入日期包裹在 JSON 中避免資料庫欄位不匹配問題
+        currentCollectionData.lastLoginDate = lastLoginDate;
+
         try {
             await supabaseClient
                 .from('user_collections')
                 .upsert({ 
                     username: currentUser,
                     collection: currentCollectionData, 
-                    diamonds: currentCollectionData.diamonds, // ⭐ 新增這行：獨立抽出 diamonds 寫入資料庫新欄位
-                    last_login_date: lastLoginDate,
+                    diamonds: currentCollectionData.diamonds, 
+                    // 移除了導致無法創建使用者的 last_login_date (因為 table 沒有這個欄位)
                     updated_at: new Date().toISOString() 
                 });
         } catch (err) {
@@ -575,7 +584,7 @@
 
         currentCollectionData.diamonds -= cost;
         updateDiamondUI();
-        saveUserData();
+        saveUserData(); // 更新鑽石數量並同步至資料庫
 
         document.getElementById('action-buttons').classList.add('hidden');
         const stage = document.getElementById('stage');
