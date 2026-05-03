@@ -178,7 +178,6 @@
         #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
         
         .collection-group-title { text-align: center; font-size: 18px; font-weight: bold; margin: 10px 0; color: #fff; }
-        /* 收藏頁卡牌改為一行 3 張 */
         .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 15px; }
         
         .card-slot { width: 100%; aspect-ratio: 63/88; background: #222; border-radius: 5px; overflow: hidden; position: relative; }
@@ -287,7 +286,7 @@
     const EVENT_ACTIVE = true; 
 
     let currentUser = "";
-    let currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0, pityCounter: 0 }; 
+    let currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0, pity_rare_count: 0 }; 
     let lastLoginDate = null;
     
     let drawnCards = [];
@@ -424,7 +423,7 @@
         if (!lastLoginDate) {
             currentCollectionData.diamonds = 60;
             lastLoginDate = new Date().toISOString();
-            currentCollectionData.lastLoginDate = lastLoginDate; // 同步寫入 JSON 防止遺失
+            currentCollectionData.lastLoginDate = lastLoginDate; 
             setTimeout(() => { alert("🎉 歡迎新玩家！已發放初始 60 💎"); }, 200);
             return true;
         }
@@ -449,7 +448,7 @@
             currentCollectionData.diamonds = (currentCollectionData.diamonds || 0) + 30;
             if (currentCollectionData.diamonds > 999) currentCollectionData.diamonds = 999;
             lastLoginDate = now.toISOString();
-            currentCollectionData.lastLoginDate = lastLoginDate; // 同步寫入 JSON 防止遺失
+            currentCollectionData.lastLoginDate = lastLoginDate; 
             setTimeout(() => { alert("🎉 每日登入獎勵！已領取 30 💎"); }, 200);
             return true;
         }
@@ -505,24 +504,22 @@
             if (error) throw error;
 
             if (data) {
-                // 已存在玩家
                 currentCollectionData = data.collection || { common: [], rare: [], super_rare: [], special_limited: [] };
-                // 讀取資料庫真實的鑽石數量
                 currentCollectionData.diamonds = data.diamonds !== null && data.diamonds !== undefined ? data.diamonds : (currentCollectionData.diamonds || 0);
-                // 優先從 JSON 中獲取最後登入時間
                 lastLoginDate = currentCollectionData.lastLoginDate || null;
+                // 讀取 DB 中的保底計數器
+                currentCollectionData.pity_rare_count = data.pity_rare_count !== undefined ? data.pity_rare_count : (currentCollectionData.pity_rare_count || 0);
             } else {
-                // 新玩家
-                currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 };
+                currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0, pity_rare_count: 0 };
                 lastLoginDate = null;
             }
 
-            // 防護結構與保底計數器初始化
+            // 防護結構初始化
             if(!currentCollectionData.special_limited) currentCollectionData.special_limited = [];
             if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
             if(!currentCollectionData.rare) currentCollectionData.rare = [];
             if(!currentCollectionData.common) currentCollectionData.common = [];
-            if(typeof currentCollectionData.pityCounter === 'undefined') currentCollectionData.pityCounter = 0;
+            if(typeof currentCollectionData.pity_rare_count === 'undefined') currentCollectionData.pity_rare_count = 0;
 
             let isInitial = giveInitialDiamondsIfNeeded();
             let isUpdated = false;
@@ -541,7 +538,7 @@
         } catch (err) {
             console.error("Supabase 發生例外狀況:", err);
             alert("雲端同步異常...\n\n自動啟用「單機離線模式」。");
-            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 60, pityCounter: 0 };
+            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 60, pity_rare_count: 0 };
             lastLoginDate = new Date().toISOString();
             updateDiamondUI();
         } finally {
@@ -554,8 +551,6 @@
 
     async function saveUserData() {
         if (!supabaseClient) return;
-        
-        // 將登入日期包裹在 JSON 中避免資料庫欄位不匹配問題
         currentCollectionData.lastLoginDate = lastLoginDate;
 
         try {
@@ -564,7 +559,8 @@
                 .upsert({ 
                     username: currentUser,
                     collection: currentCollectionData, 
-                    diamonds: currentCollectionData.diamonds, 
+                    diamonds: currentCollectionData.diamonds,
+                    pity_rare_count: currentCollectionData.pity_rare_count, // 確保寫入保底計數器
                     updated_at: new Date().toISOString() 
                 });
         } catch (err) {
@@ -573,7 +569,7 @@
     }
 
     // ==========================================
-    // 5. 抽卡邏輯 (已更新為累積保底機制)
+    // 5. 抽卡邏輯 (God Pack 新規則與十連跨次保底)
     // ==========================================
     function prepareDraw(num) {
         const cost = num === 1 ? 3 : 27;
@@ -600,61 +596,104 @@
         const zone = document.getElementById('slash-zone');
         zone.classList.add('hidden');
 
-        // God Pack 機制 (直接出 10 張高等卡，重置保底)
-        if (num === 10 && Math.random() < 0.005) {
-            isCurrentDrawGodPack = true;
-            let srPool = Array.from({length: TOTAL_SUPER_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
-            srPool.sort(() => Math.random() - 0.5);
-            let selectedCards = [];
-            if (TOTAL_SUPER_RARE >= 10) {
-                selectedCards = srPool.slice(0, 10).map(id => ({ type: 'super_rare', id: id, isGodPack: true }));
-            } else {
-                selectedCards = srPool.map(id => ({ type: 'super_rare', id: id, isGodPack: true }));
-                let rPool = Array.from({length: TOTAL_RARE}, (_, i) => (i + 1).toString().padStart(3, '0'));
-                rPool.sort(() => Math.random() - 0.5);
-                let needed = 10 - selectedCards.length;
-                let rareSelected = rPool.slice(0, needed).map(id => ({ type: 'rare', id: id, isGodPack: true }));
-                selectedCards = selectedCards.concat(rareSelected);
-            }
-            selectedCards.sort(() => Math.random() - 0.5);
-            drawnCards = selectedCards;
-            currentCollectionData.pityCounter = 0; // 重置保底
-        }
+        if (num === 10) {
+            // God Pack 判定 (0.5%)
+            if (Math.random() < 0.005) {
+                isCurrentDrawGodPack = true;
+                currentCollectionData.pity_rare_count = 0; // 觸發神包重置保底
 
-        // 一般抽卡機制
-        if (drawnCards.length === 0) {
-            for(let i=0; i<num; i++) {
-                const rand = Math.random();
-                let cardType, maxId;
-                
-                // 累積 10 抽保底觸發，僅限產出 Rare 卡
-                if (currentCollectionData.pityCounter >= 9) {
-                    cardType = 'rare';
-                    maxId = TOTAL_RARE;
-                    currentCollectionData.pityCounter = 0;
-                } else {
-                    if (EVENT_ACTIVE && rand < 0.005 && TOTAL_SPECIAL_LIMITED > 0) {
-                        cardType = 'special_limited';
-                        maxId = TOTAL_SPECIAL_LIMITED;
-                        currentCollectionData.pityCounter = 0; // 高稀有度重置保底
-                    } else if (rand < 0.015) { 
-                        cardType = 'super_rare';
-                        maxId = TOTAL_SUPER_RARE;
-                        currentCollectionData.pityCounter = 0; // 高稀有度重置保底
-                    } else if (rand < 0.115) { // Rare 基礎機率調低至 10% (0.115 - 0.015 = 0.1)
-                        cardType = 'rare';
-                        maxId = TOTAL_RARE;
-                        currentCollectionData.pityCounter = 0; // 抽中 Rare 重置保底
-                    } else {
-                        cardType = 'common';
-                        maxId = TOTAL_COMMON;
-                        currentCollectionData.pityCounter++; // 累積保底計數
+                let selectedCards = [];
+                // 優先級抽卡輔助函數
+                const addFromPool = (type, maxTotal) => {
+                    let available = Array.from({length: maxTotal}, (_, i) => (i + 1).toString().padStart(3, '0'));
+                    available.sort(() => Math.random() - 0.5); // 隨機洗牌
+                    for (let id of available) {
+                        if (selectedCards.length < 10) {
+                            selectedCards.push({ type: type, id: id, isGodPack: true });
+                        }
                     }
+                };
+
+                // God Pack 2.0: 依序向下抓取不重複卡片
+                if (EVENT_ACTIVE) {
+                    addFromPool('special_limited', TOTAL_SPECIAL_LIMITED);
                 }
-                
-                const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
-                drawnCards.push({type: cardType, id: cardId, isGodPack: false});
+                addFromPool('super_rare', TOTAL_SUPER_RARE);
+                addFromPool('rare', TOTAL_RARE);
+
+                // 將 10 張卡最後再洗牌一次，確保高稀有度不會全卡在前面
+                selectedCards.sort(() => Math.random() - 0.5);
+                drawnCards = selectedCards;
+
+            } else {
+                // 一般十連抽
+                let hasRareOrAbove = false;
+
+                for(let i=0; i<10; i++) {
+                    const rand = Math.random();
+                    let cardType, maxId;
+                    
+                    if (EVENT_ACTIVE && rand < 0.005 && TOTAL_SPECIAL_LIMITED > 0) {
+                        cardType = 'special_limited'; maxId = TOTAL_SPECIAL_LIMITED; hasRareOrAbove = true;
+                    } else if (rand < 0.015) { 
+                        cardType = 'super_rare'; maxId = TOTAL_SUPER_RARE; hasRareOrAbove = true;
+                    } else if (rand < 0.045) { // Rare 機率為 3% (0.015 + 0.030)
+                        cardType = 'rare'; maxId = TOTAL_RARE; hasRareOrAbove = true;
+                    } else {
+                        cardType = 'common'; maxId = TOTAL_COMMON;
+                    }
+                    
+                    const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
+                    drawnCards.push({type: cardType, id: cardId, isGodPack: false});
+                }
+
+                // 結算保底系統
+                if (!hasRareOrAbove) {
+                    // 全 Common，檢查是否觸發保底
+                    if (currentCollectionData.pity_rare_count >= 9) {
+                        // 觸發保底，重置計數
+                        currentCollectionData.pity_rare_count = 0;
+                        let replaceIdx = Math.floor(Math.random() * 10);
+                        
+                        // 保底仍有跳階機率
+                        let pRand = Math.random();
+                        let pType = 'rare'; 
+                        let pMax = TOTAL_RARE;
+                        
+                        if (EVENT_ACTIVE && pRand < 0.005 && TOTAL_SPECIAL_LIMITED > 0) {
+                            pType = 'special_limited'; pMax = TOTAL_SPECIAL_LIMITED;
+                        } else if (pRand < 0.015) {
+                            pType = 'super_rare'; pMax = TOTAL_SUPER_RARE;
+                        }
+                        
+                        let pId = Math.floor(Math.random() * pMax + 1).toString().padStart(3, '0');
+                        drawnCards[replaceIdx] = { type: pType, id: pId, isGodPack: false };
+                    } else {
+                        // 未達保底次數，累加一次十連全灰紀錄
+                        currentCollectionData.pity_rare_count++;
+                    }
+                } else {
+                    // 十連中有中獎，保底計數歸零
+                    currentCollectionData.pity_rare_count = 0;
+                }
             }
+        } else if (num === 1) {
+            // 單抽: 完全隔離，不影響/不參考保底機制
+            const rand = Math.random();
+            let cardType, maxId;
+            
+            if (EVENT_ACTIVE && rand < 0.005 && TOTAL_SPECIAL_LIMITED > 0) {
+                cardType = 'special_limited'; maxId = TOTAL_SPECIAL_LIMITED;
+            } else if (rand < 0.015) { 
+                cardType = 'super_rare'; maxId = TOTAL_SUPER_RARE;
+            } else if (rand < 0.045) { // Rare 3%
+                cardType = 'rare'; maxId = TOTAL_RARE;
+            } else {
+                cardType = 'common'; maxId = TOTAL_COMMON;
+            }
+            
+            const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
+            drawnCards.push({type: cardType, id: cardId, isGodPack: false});
         }
 
         // 保存更新後的鑽石與保底計數器
@@ -835,10 +874,16 @@
             saveUserData();
         } else {
             if (currentCollectionData.diamonds < 999) {
-                currentCollectionData.diamonds = Math.min(999, currentCollectionData.diamonds + 1);
+                // 階梯式鑽石返還
+                let refundAmt = 1;
+                if (type === 'rare') refundAmt = 2;
+                else if (type === 'super_rare') refundAmt = 3;
+                else if (type === 'special_limited') refundAmt = 4;
+
+                currentCollectionData.diamonds = Math.min(999, currentCollectionData.diamonds + refundAmt);
                 updateDiamondUI();
                 saveUserData();
-                showFloatingText(el, "+1 💎");
+                showFloatingText(el, "+" + refundAmt + " 💎");
             }
         }
     }
@@ -908,7 +953,7 @@
 
     async function resetCollection() {
         if(confirm(`確定要重置 ${currentUser} 的收藏與鑽石嗎？此操作無法還原。`)) {
-            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 60, pityCounter: 0 };
+            currentCollectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 60, pity_rare_count: 0 };
             lastLoginDate = new Date().toISOString();
             updateCollectionUI(); 
             updateDiamondUI();
@@ -955,7 +1000,7 @@
     function updateCollectionUI() {
         const tabNav = document.getElementById('collection-tabs');
         const content = document.getElementById('collection-content');
-        let data = currentCollectionData || { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0 };
+        let data = currentCollectionData || { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0, pity_rare_count: 0 };
         
         tabNav.innerHTML = "";
         content.innerHTML = "";
