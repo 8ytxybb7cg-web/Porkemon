@@ -87,7 +87,7 @@
             position: absolute; bottom: -100%; height: 70vh; max-height: 600px; max-width: 85vw; aspect-ratio: 75 / 120; 
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
-        .pack-wrapper.active { bottom: 10%; pointer-events: auto; }
+        .pack-wrapper.active { bottom: 2%; pointer-events: auto; } /* 修改：拉低卡包位置，利用下方空間 */
         
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -848,14 +848,16 @@
         let tx = '-50%', ty = '-50%', tscale = '1';
 
         if(drawnCards.length > 1) { 
-            container.style.width = '20vw';
-            container.style.maxWidth = '80px';
-            tscale = '0.9'; 
+            /* 修改：最大化十連抽的卡牌縮放比例，維持 63:88 比例並不產生重疊 */
+            container.style.width = '23vw';
+            container.style.maxWidth = '120px'; /* 確保平板/電腦端不會過度放大 */
+            tscale = '1'; 
 
             let x, y;
-            if (idx < 3) { y = '30%'; x = `${20 + idx * 30}%`; } 
-            else if (idx < 7) { y = '55%'; x = `${15 + (idx - 3) * 23.33}%`; } 
-            else { y = '80%'; x = `${20 + (idx - 7) * 30}%`; }
+            /* 將卡牌完美置中，利用 100% 的寬度進行等距排列 */
+            if (idx < 3) { y = '30%'; x = `${16.66 + idx * 33.33}%`; } /* 第 1 排 (3張) */
+            else if (idx < 7) { y = '55%'; x = `${12.5 + (idx - 3) * 25}%`; } /* 第 2 排 (4張) */
+            else { y = '80%'; x = `${16.66 + (idx - 7) * 33.33}%`; } /* 第 3 排 (3張) */
             
             container.style.left = x; container.style.top = y;
         } else {
