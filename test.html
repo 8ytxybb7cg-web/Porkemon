@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA 核心 Meta 設定 -->
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://8ytxybb7cg-web.github.io/Porkemon/icons/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    
     <title>抽肥豬卡 - Porkémon</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -33,6 +40,22 @@
             width: 100%; height: 100%; min-height: 0; position: relative;
         }
         .hidden { display: none !important; }
+
+        /* PWA 安裝按鈕與提示 (玻璃質感) */
+        #btn-install { 
+            background: linear-gradient(45deg, #444, #222); border: 1.5px solid #fff; color: #fff; 
+            padding: 10px 40px; font-size: 16px; cursor: pointer; pointer-events: auto; 
+            transition: opacity 0.3s; margin-top: 15px; border-radius: 25px; box-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+        #ios-install-prompt {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 85%; max-width: 320px; padding: 20px 15px;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px;
+            text-align: center; color: white; z-index: 1000; font-size: 15px; line-height: 1.6;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5); pointer-events: auto;
+        }
+        #ios-install-prompt .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 20px; font-weight: bold; color: rgba(255,255,255,0.6); }
 
         /* 玩家狀態資訊條 */
         #top-info {
@@ -254,6 +277,14 @@
             <input type="text" id="username-input" placeholder="請輸入玩家名稱" autocomplete="off" />
         </div>
         <button id="btn-enter">開始抽卡</button>
+        <button id="btn-install" class="hidden">安裝 Porkémon App</button>
+
+        <!-- iOS 安裝提示 -->
+        <div id="ios-install-prompt" class="hidden">
+            <span class="close-btn" onclick="this.parentElement.classList.add('hidden')">&times;</span>
+            <p style="margin:0; font-weight:bold; font-size:16px;">獲得全螢幕沉浸體驗</p>
+            <p style="margin-top:8px; opacity:0.9;">點擊瀏覽器下方「分享」圖標 <br>選擇「加入主畫面」</p>
+        </div>
     </section>
 
     <section id="main-screen" class="screen hidden">
@@ -353,12 +384,46 @@
     let isCurrentDrawGodPack = false;
 
     // ==========================================
-    // 本地記憶初始化 (僅玩家名稱)
+    // 本地記憶與 PWA 初始化 (自動登入)
     // ==========================================
     window.onload = () => {
         const savedName = localStorage.getItem('porkemon_username');
         if (savedName) {
             document.getElementById('username-input').value = savedName;
+            document.getElementById('btn-enter').click(); // 自動點擊進入，實現秒開
+        }
+
+        // 註冊 Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker 註冊成功 (v2.1)'))
+                .catch(err => console.error('Service Worker 註冊失敗', err));
+        }
+
+        // PWA Android 安裝引導
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // 只有未設定過玩家名稱(停留在首頁)時，才顯示安裝按鈕
+            if (!savedName) {
+                const installBtn = document.getElementById('btn-install');
+                installBtn.classList.remove('hidden');
+                installBtn.onclick = async () => {
+                    installBtn.classList.add('hidden');
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                };
+            }
+        });
+
+        // PWA iOS 安裝引導 (判斷 Safari 且尚未加入主畫面)
+        const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && window.navigator.standalone;
+        
+        if (isIos() && !isInStandaloneMode() && !savedName) {
+            document.getElementById('ios-install-prompt').classList.remove('hidden');
         }
     };
 
