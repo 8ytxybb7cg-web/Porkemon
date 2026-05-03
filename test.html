@@ -72,7 +72,7 @@
         /* 抽卡舞台 */
         #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: auto; }
 
-        /* 切開動畫與包裝容器 (已調整大小與位置避免重疊) */
+        /* 切開動畫與包裝容器 */
         .pack-wrapper {
             position: absolute; bottom: -100%; height: 70vh; max-height: 600px; max-width: 85vw; aspect-ratio: 75 / 120; 
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
@@ -280,9 +280,9 @@
     const IMG_BACK = BASE_URL + "back/back.png";
     
     const TOTAL_COMMON = 28;
-    const TOTAL_RARE = 16;
+    const TOTAL_RARE = 14;
     const TOTAL_SUPER_RARE = 9;
-    const TOTAL_SPECIAL_LIMITED = 5; 
+    const TOTAL_SPECIAL_LIMITED = 2; 
 
     const EVENT_ACTIVE = true; 
 
@@ -647,7 +647,9 @@
                 let hasRareOrAbove = drawnCards.some(c => c.type !== 'common');
                 if (!hasRareOrAbove) {
                     const cardId = Math.floor(Math.random() * TOTAL_RARE + 1).toString().padStart(3, '0');
-                    drawnCards[9] = {type: 'rare', id: cardId, isGodPack: false};
+                    // 將原本固定的 drawnCards[9] 改為隨機索引，讓保底卡片隨機出現在 10 個位置中的任何一個
+                    const luckyIndex = Math.floor(Math.random() * 10);
+                    drawnCards[luckyIndex] = {type: 'rare', id: cardId, isGodPack: false};
                 }
             }
         }
