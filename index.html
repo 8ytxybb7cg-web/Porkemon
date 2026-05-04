@@ -2,7 +2,15 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 新增 viewport-fit=cover 以支援 iPhone 動態島及底部導航條的 Safe Area 適配 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- PWA 核心 Meta 設定 -->
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://8ytxybb7cg-web.github.io/Porkemon/icons/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    
     <title>抽肥豬卡 - Porkémon</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -34,9 +42,27 @@
         }
         .hidden { display: none !important; }
 
+        /* PWA 安裝按鈕與提示 (玻璃質感) */
+        #btn-install { 
+            background: linear-gradient(45deg, #444, #222); border: 1.5px solid #fff; color: #fff; 
+            padding: 10px 40px; font-size: 16px; cursor: pointer; pointer-events: auto; 
+            transition: opacity 0.3s; margin-top: 15px; border-radius: 25px; box-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+        #ios-install-prompt {
+            /* 加入 PWA 底部適配 */
+            position: absolute; bottom: calc(30px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+            width: 85%; max-width: 320px; padding: 20px 15px;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px;
+            text-align: center; color: white; z-index: 1000; font-size: 15px; line-height: 1.6;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5); pointer-events: auto;
+        }
+        #ios-install-prompt .close-btn { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 20px; font-weight: bold; color: rgba(255,255,255,0.6); }
+
         /* 玩家狀態資訊條 */
         #top-info {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            /* 頂部適配防遮擋 */
+            position: absolute; top: calc(20px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px;
             border: 1px solid #fff; font-size: 18px; font-weight: bold;
             z-index: 200; pointer-events: auto; white-space: nowrap; box-shadow: 0 0 10px rgba(255,255,255,0.2);
@@ -87,7 +113,8 @@
             position: absolute; bottom: -100%; height: 70vh; max-height: 600px; max-width: 85vw; aspect-ratio: 75 / 120; 
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
-        .pack-wrapper.active { bottom: 2%; pointer-events: auto; } /* 修改：拉低卡包位置，利用下方空間 */
+        /* 提升 pack 底部高度，並加入 safe-area 適配 */
+        .pack-wrapper.active { bottom: calc(15% + env(safe-area-inset-bottom)); pointer-events: auto; }
         
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -123,7 +150,8 @@
         /* 底部導航 & 共用 Pill 形按鈕 */
         .bottom-nav { 
             position: absolute; 
-            bottom: 20px; 
+            /* 加入 PWA 底部適配 (保留 25px 基礎間距 + 安全區域) */
+            bottom: calc(25px + env(safe-area-inset-bottom)); 
             width: 90%;
             max-width: 400px;
             display: flex; 
@@ -156,7 +184,7 @@
         }
 
         /* 收藏頁面 */
-        #collection-screen { justify-content: flex-start; padding-top: 20px; overflow: hidden; box-sizing: border-box; }
+        #collection-screen { justify-content: flex-start; padding-top: calc(20px + env(safe-area-inset-top)); overflow: hidden; box-sizing: border-box; }
         .collection-header { padding: 5px 10px; text-align: center; width: 100%; flex-shrink: 0; pointer-events: auto; }
         .collection-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 0 15px; }
         
@@ -207,7 +235,12 @@
         }
         .tab-btn.active { background: white; color: black; font-weight: bold; }
 
-        #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: 20px; -webkit-overflow-scrolling: touch; }
+        /* 增加 PWA 底部滑動緩衝 */
+        #collection-content { 
+            flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; 
+            padding-bottom: calc(30px + env(safe-area-inset-bottom)); 
+            -webkit-overflow-scrolling: touch; 
+        }
         
         .collection-group-title { text-align: center; font-size: 18px; font-weight: bold; margin: 10px 0; color: #fff; }
         .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 15px; }
@@ -254,6 +287,14 @@
             <input type="text" id="username-input" placeholder="請輸入玩家名稱" autocomplete="off" />
         </div>
         <button id="btn-enter">開始抽卡</button>
+        <button id="btn-install" class="hidden">安裝 Porkémon App</button>
+
+        <!-- iOS 安裝提示 -->
+        <div id="ios-install-prompt" class="hidden">
+            <span class="close-btn" onclick="this.parentElement.classList.add('hidden')">&times;</span>
+            <p style="margin:0; font-weight:bold; font-size:16px;">獲得全螢幕沉浸體驗</p>
+            <p style="margin-top:8px; opacity:0.9;">點擊瀏覽器下方「分享」圖標 <br>選擇「加入主畫面」</p>
+        </div>
     </section>
 
     <section id="main-screen" class="screen hidden">
@@ -353,12 +394,46 @@
     let isCurrentDrawGodPack = false;
 
     // ==========================================
-    // 本地記憶初始化 (僅玩家名稱)
+    // 本地記憶與 PWA 初始化 (自動登入)
     // ==========================================
     window.onload = () => {
         const savedName = localStorage.getItem('porkemon_username');
         if (savedName) {
             document.getElementById('username-input').value = savedName;
+            document.getElementById('btn-enter').click(); // 自動點擊進入，實現秒開
+        }
+
+        // 註冊 Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker 註冊成功 (v2.1)'))
+                .catch(err => console.error('Service Worker 註冊失敗', err));
+        }
+
+        // PWA Android 安裝引導
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // 只有未設定過玩家名稱(停留在首頁)時，才顯示安裝按鈕
+            if (!savedName) {
+                const installBtn = document.getElementById('btn-install');
+                installBtn.classList.remove('hidden');
+                installBtn.onclick = async () => {
+                    installBtn.classList.add('hidden');
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                };
+            }
+        });
+
+        // PWA iOS 安裝引導 (判斷 Safari 且尚未加入主畫面)
+        const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && window.navigator.standalone;
+        
+        if (isIos() && !isInStandaloneMode() && !savedName) {
+            document.getElementById('ios-install-prompt').classList.remove('hidden');
         }
     };
 
@@ -848,16 +923,14 @@
         let tx = '-50%', ty = '-50%', tscale = '1';
 
         if(drawnCards.length > 1) { 
-            /* 修改：最大化十連抽的卡牌縮放比例，維持 63:88 比例並不產生重疊 */
-            container.style.width = '23vw';
-            container.style.maxWidth = '120px'; /* 確保平板/電腦端不會過度放大 */
-            tscale = '1'; 
+            container.style.width = '20vw';
+            container.style.maxWidth = '80px';
+            tscale = '0.9'; 
 
             let x, y;
-            /* 將卡牌完美置中，利用 100% 的寬度進行等距排列 */
-            if (idx < 3) { y = '30%'; x = `${16.66 + idx * 33.33}%`; } /* 第 1 排 (3張) */
-            else if (idx < 7) { y = '55%'; x = `${12.5 + (idx - 3) * 25}%`; } /* 第 2 排 (4張) */
-            else { y = '80%'; x = `${16.66 + (idx - 7) * 33.33}%`; } /* 第 3 排 (3張) */
+            if (idx < 3) { y = '30%'; x = `${20 + idx * 30}%`; } 
+            else if (idx < 7) { y = '55%'; x = `${15 + (idx - 3) * 23.33}%`; } 
+            else { y = '80%'; x = `${20 + (idx - 7) * 30}%`; }
             
             container.style.left = x; container.style.top = y;
         } else {
@@ -1067,7 +1140,7 @@
             currentCollectionData.rewards_claimed = { s1_common: false, s1_rare: false, s1_sr: false, s1_special: false };
         }
 
-        // 計算符合 S1 編號的卡片數量 (防禦性過濾)
+        // 統計各類別數量
         let counts = {
             common: currentCollectionData.common.filter(id => parseInt(id) <= S1_TOTALS.common).length,
             rare: currentCollectionData.rare.filter(id => parseInt(id) <= S1_TOTALS.rare).length,
@@ -1075,25 +1148,29 @@
             special: currentCollectionData.special_limited.filter(id => parseInt(id) <= S1_TOTALS.special_limited).length
         };
         
-        let totalOwned = counts.common + counts.rare + counts.sr + counts.special;
-        let totalS1 = S1_TOTALS.common + S1_TOTALS.rare + S1_TOTALS.super_rare + S1_TOTALS.special_limited;
-        let pct = Math.floor((totalOwned / totalS1) * 100);
+        // 進度條只計算 普通、稀有、超級稀有 (不納入特別限定)
+        let totalProgressOwned = counts.common + counts.rare + counts.sr;
+        let totalProgressBar = S1_TOTALS.common + S1_TOTALS.rare + S1_TOTALS.super_rare;
+        let pct = Math.floor((totalProgressOwned / totalProgressBar) * 100);
         
-        document.getElementById('s1-progress-text').innerText = `${pct}% (${totalOwned}/${totalS1})`;
+        document.getElementById('s1-progress-text').innerText = `${pct}% (${totalProgressOwned}/${totalProgressBar})`;
         document.getElementById('s1-progress-bar-fill').style.width = `${pct}%`;
         
-        // 勳章顯示
+        // 勳章顯示邏輯
         if (currentCollectionData.rewards_claimed.s1_special) {
             document.getElementById('special-badge').classList.remove('hidden');
         } else {
             document.getElementById('special-badge').classList.add('hidden');
         }
 
-        // 更新四個按鈕狀態
+        // 更新按鈕狀態
         setupClaimButton('common', counts.common >= S1_TOTALS.common, currentCollectionData.rewards_claimed.s1_common, "領取 100💎");
         setupClaimButton('rare', counts.rare >= S1_TOTALS.rare, currentCollectionData.rewards_claimed.s1_rare, "領取 200💎");
         setupClaimButton('sr', counts.sr >= S1_TOTALS.super_rare, currentCollectionData.rewards_claimed.s1_sr, "領取 300💎");
-        setupClaimButton('special', counts.special >= 1, currentCollectionData.rewards_claimed.s1_special, "領取稱號");
+        
+        // 肥豬大師勳章領取條件：基本進度達 100% 且 特別限定全集齊
+        let isMasterMet = (pct === 100) && (counts.special >= S1_TOTALS.special_limited);
+        setupClaimButton('special', isMasterMet, currentCollectionData.rewards_claimed.s1_special, "領取稱號");
     }
 
     function setupClaimButton(type, isMet, isClaimed, readyText) {
@@ -1133,9 +1210,10 @@
             currentCollectionData.rewards_claimed.s1_sr = true;
             alert("🎉 恭喜儲齊 S1 超級稀有卡！獲得 300 💎");
         } else if (type === 'special') {
+            // 解鎖勳章及金色名字
             hasSpecialGlobal = true;
             currentCollectionData.rewards_claimed.s1_special = true;
-            alert("🏆 恭喜獲得 Special 限定！解鎖「金色玩家名稱」及「成就勳章」！");
+            alert("🏆 恭喜完全集齊！解鎖「肥豬大師勳章」及「金色玩家名稱」！");
         }
         
         if (currentCollectionData.diamonds > 999) currentCollectionData.diamonds = 999;
@@ -1155,11 +1233,12 @@
         tabNav.innerHTML = "";
         content.innerHTML = "";
 
+        // 將順序反轉為：普通 -> 稀有 -> 超級稀有 -> 特別限定
         const tabs = [
-            { id: 'special_limited', total: TOTAL_SPECIAL_LIMITED, list: data.special_limited, label: '特別限定' },
-            { id: 'super_rare', total: TOTAL_SUPER_RARE, list: data.super_rare, label: '超級稀有' },
+            { id: 'common', total: TOTAL_COMMON, list: data.common, label: '普通' },
             { id: 'rare', total: TOTAL_RARE, list: data.rare, label: '稀有' },
-            { id: 'common', total: TOTAL_COMMON, list: data.common, label: '普通' }
+            { id: 'super_rare', total: TOTAL_SUPER_RARE, list: data.super_rare, label: '超級稀有' },
+            { id: 'special_limited', total: TOTAL_SPECIAL_LIMITED, list: data.special_limited, label: '特別限定' }
         ];
 
         let firstAvailableTab = null;
