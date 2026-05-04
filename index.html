@@ -2,9 +2,7 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <!-- 新增 viewport-fit=cover 以支援 iPhone 動態島及底部導航條的 Safe Area 適配 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <!-- PWA 核心 Meta 設定 -->
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -108,18 +106,30 @@
         /* 抽卡舞台 */
         #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: auto; }
 
-        /* 切開動畫與包裝容器 */
+        /* ==============================
+           修改重點：切開動畫與包裝容器
+           ============================== */
         .pack-wrapper {
-            position: absolute; bottom: -100%; height: 70vh; max-height: 600px; max-width: 85vw; aspect-ratio: 75 / 120; 
-            transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
+            position: absolute;
+            bottom: -100%; 
+            /* 將高度改為 55dvh，防止因卡包過高遮擋上方用戶名，全面使用 dvh 適配 */
+            height: 55dvh; 
+            max-height: 480px; 
+            max-width: 85vw; 
+            aspect-ratio: 75 / 120; 
+            transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            /* 強制水平居中，確保 JS 生成的偏移 (translate) 基準一致 */
+            left: 0; right: 0; margin: 0 auto;
         }
-        /* 提升 pack 底部高度，並加入 safe-area 適配 */
-        .pack-wrapper.active { bottom: calc(15% + env(safe-area-inset-bottom)); pointer-events: auto; }
         
-        /* PWA 專屬：向下調整卡包位置，防止遮擋上方用戶名及鑽石資訊 */
-        @media all and (display-mode: standalone) {
-            .pack-wrapper.active { bottom: calc(2% + env(safe-area-inset-bottom)); }
+        /* 統一 PWA 與網頁版的顯示位置：動態計算底部安全距離 */
+        .pack-wrapper.active { 
+            bottom: calc(12dvh + env(safe-area-inset-bottom));
+            pointer-events: auto; 
         }
+        
+        /* (已移除舊版 PWA 獨立高度判斷 @media，依賴 dvh 達成全端統一) */
         
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -129,12 +139,14 @@
         .split-left { clip-path: polygon(0 0, 100% 0, 0 100%); }
         .split-right { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
 
-        /* 偵測區域 (將感應範圍從 35% 擴大至 70%，並稍微向下偏移，讓玩家能於底部按鈕附近直接切開) */
+        /* 偵測區域 */
         #slash-zone { position: absolute; top: 10%; left: 15%; width: 70%; height: 70%; z-index: 200; pointer-events: auto; }
 
         /* 3D 翻轉卡片容器 */
         .card-container {
-            position: absolute; width: 45vh; max-width: 250px; aspect-ratio: 63/88; 
+            position: absolute;
+            /* 同步將這裡的 vh 改為 dvh，提升跨環境相容性 */
+            width: 45dvh; max-width: 250px; aspect-ratio: 63/88; 
             perspective: 1000px; display: none; z-index: 100; opacity: 0;
             transition: opacity 1s ease-out, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transform: translate(-50%, calc(-50% + 50px)) scale(0.5); 
@@ -154,39 +166,18 @@
 
         /* 底部導航 & 共用 Pill 形按鈕 */
         .bottom-nav { 
-            position: absolute; 
+            position: absolute;
             /* 加入 PWA 底部適配 (保留 25px 基礎間距 + 安全區域) */
-            bottom: calc(25px + env(safe-area-inset-bottom)); 
-            width: 90%;
-            max-width: 400px;
-            display: flex; 
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px; 
-            pointer-events: auto; 
-            z-index: 250; 
-            padding: 0 10px;
-            box-sizing: border-box;
+            bottom: calc(25px + env(safe-area-inset-bottom));
+            width: 90%; max-width: 400px; display: flex; justify-content: space-between; align-items: center;
+            gap: 10px; pointer-events: auto; z-index: 250; padding: 0 10px; box-sizing: border-box;
         }
         .draw-btn { 
-            background: #fff; 
-            color: #000; 
-            border: none; 
-            padding: 10px 5px; 
-            font-size: 14px; 
-            font-weight: bold; 
-            border-radius: 25px; 
-            cursor: pointer; 
-            white-space: nowrap; 
-            flex: 1;
-            text-align: center;
-            min-width: 0; 
+            background: #fff; color: #000; border: none; padding: 10px 5px; font-size: 14px; 
+            font-weight: bold; border-radius: 25px; cursor: pointer; white-space: nowrap; flex: 1; text-align: center; min-width: 0; 
         }
         
-        .pill-btn {
-            background: transparent; color: #fff; border: 2px solid #fff; border-radius: 50px;
-            padding: 8px 20px; font-size: 16px; font-weight: bold; cursor: pointer; pointer-events: auto;
-        }
+        .pill-btn { background: transparent; color: #fff; border: 2px solid #fff; border-radius: 50px; padding: 8px 20px; font-size: 16px; font-weight: bold; cursor: pointer; pointer-events: auto; }
 
         /* 收藏頁面 */
         #collection-screen { justify-content: flex-start; padding-top: calc(20px + env(safe-area-inset-top)); overflow: hidden; box-sizing: border-box; }
@@ -194,35 +185,14 @@
         .collection-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 0 15px; }
         
         /* 系列獎勵面板 */
-        #s1-reward-panel { 
-            margin: 10px 15px; padding: 12px 15px; 
-            background: rgba(255,255,255,0.1); border-radius: 12px; 
-            border: 1px solid rgba(255,255,255,0.2); pointer-events: auto;
-        }
-        .s1-progress-header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #fff;
-        }
-        .s1-progress-bar-bg { 
-            width: 100%; height: 8px; background: rgba(0,0,0,0.6); 
-            border-radius: 5px; overflow: hidden; margin-bottom: 12px; 
-        }
-        #s1-progress-bar-fill { 
-            height: 100%; background: linear-gradient(90deg, #ffd700, #ffaa00); 
-            width: 0%; transition: width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-        }
-        .s1-claim-buttons { 
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; 
-        }
-        .claim-btn { 
-            padding: 8px 2px; font-size: 11px; border-radius: 6px; border: none; 
-            font-weight: bold; cursor: pointer; transition: all 0.3s; text-align: center; white-space: nowrap;
-        }
+        #s1-reward-panel { margin: 10px 15px; padding: 12px 15px; background: rgba(255,255,255,0.1); border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); pointer-events: auto; }
+        .s1-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #fff; }
+        .s1-progress-bar-bg { width: 100%; height: 8px; background: rgba(0,0,0,0.6); border-radius: 5px; overflow: hidden; margin-bottom: 12px; }
+        #s1-progress-bar-fill { height: 100%; background: linear-gradient(90deg, #ffd700, #ffaa00); width: 0%; transition: width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .s1-claim-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .claim-btn { padding: 8px 2px; font-size: 11px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: all 0.3s; text-align: center; white-space: nowrap; }
         .claim-btn.unmet { background: #444; color: #888; cursor: not-allowed; filter: grayscale(1); }
-        .claim-btn.ready { 
-            background: linear-gradient(45deg, #ffd700, #ff8800); color: #000; 
-            box-shadow: 0 0 10px rgba(255, 170, 0, 0.8); animation: pulse-gold 1.5s infinite; 
-        }
+        .claim-btn.ready { background: linear-gradient(45deg, #ffd700, #ff8800); color: #000; box-shadow: 0 0 10px rgba(255, 170, 0, 0.8); animation: pulse-gold 1.5s infinite; }
         .claim-btn.claimed { background: #222; color: #ffd700; border: 1px solid #ffd700; cursor: default; }
         
         #special-badge { font-size: 14px; text-shadow: 0 0 10px #ffd700; animation: float-badge 2s ease-in-out infinite; }
@@ -230,22 +200,12 @@
         @keyframes pulse-gold { 0% { box-shadow: 0 0 5px #ffaa00; transform: scale(1); } 50% { box-shadow: 0 0 15px #ffaa00; transform: scale(1.05); } 100% { box-shadow: 0 0 5px #ffaa00; transform: scale(1); } }
 
         /* 頂部導航分頁 */
-        .tab-nav {
-            display: flex; justify-content: center; gap: 10px;
-            margin-bottom: 10px; flex-wrap: wrap; padding: 0 10px;
-        }
-        .tab-btn {
-            background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.5);
-            padding: 8px 15px; border-radius: 20px; font-size: 14px; cursor: pointer; transition: all 0.3s;
-        }
+        .tab-nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; padding: 0 10px; }
+        .tab-btn { background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.5); padding: 8px 15px; border-radius: 20px; font-size: 14px; cursor: pointer; transition: all 0.3s; }
         .tab-btn.active { background: white; color: black; font-weight: bold; }
 
         /* 增加 PWA 底部滑動緩衝 */
-        #collection-content { 
-            flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; 
-            padding-bottom: calc(30px + env(safe-area-inset-bottom)); 
-            -webkit-overflow-scrolling: touch; 
-        }
+        #collection-content { flex: 1; width: 100%; max-width: 600px; overflow-y: auto; pointer-events: auto; padding-bottom: calc(30px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
         
         .collection-group-title { text-align: center; font-size: 18px; font-weight: bold; margin: 10px 0; color: #fff; }
         .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 15px; }
@@ -254,15 +214,12 @@
         .card-slot img { width: 100%; height: 100%; object-fit: fill; }
 
         /* 全螢幕放大預覽 */
-        #fullscreen-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
-        }
+        #fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
         #fullscreen-overlay.active { opacity: 1; pointer-events: auto; }
         
         #fullscreen-card-img {
-            height: 60vh; max-height: 600px; aspect-ratio: 63/88; border-radius: 12px;
+            /* 同步將 vh 改為 dvh */
+            height: 60dvh; max-height: 600px; aspect-ratio: 63/88; border-radius: 12px;
             object-fit: fill; -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; pointer-events: auto;
         }
 
@@ -271,14 +228,10 @@
         .overlay-controls { margin-top: 10px; display: flex; gap: 15px; pointer-events: auto; }
         
         /* 浮動加鑽動畫 */
-        .float-text {
-            position: fixed; color: #00ffff; font-weight: bold; font-size: 24px; text-shadow: 0 0 5px #000;
-            z-index: 1000; pointer-events: none; transition: all 1s ease-out; opacity: 1;
-        }
+        .float-text { position: fixed; color: #00ffff; font-weight: bold; font-size: 24px; text-shadow: 0 0 5px #000; z-index: 1000; pointer-events: none; transition: all 1s ease-out; opacity: 1; }
         
         .tab-section { display: none; }
         .tab-section.active { display: block; }
-
     </style>
 </head>
 <body>
@@ -294,7 +247,6 @@
         <button id="btn-enter">開始抽卡</button>
         <button id="btn-install" class="hidden">安裝 Porkémon App</button>
 
-        <!-- iOS 安裝提示 -->
         <div id="ios-install-prompt" class="hidden">
             <span class="close-btn" onclick="this.parentElement.classList.add('hidden')">&times;</span>
             <p style="margin:0; font-weight:bold; font-size:16px;">獲得全螢幕沉浸體驗</p>
@@ -329,7 +281,6 @@
                 <button class="pill-btn" onclick="resetCollection()" style="border-color: #ff4444; color: #ff4444;">重置</button>
             </div>
             
-            <!-- 系列成就進度面板 -->
             <div id="s1-reward-panel">
                 <div class="s1-progress-header">
                     <span>Series 1 收集度：<span id="s1-progress-text">0% (0/53)</span></span>
@@ -345,12 +296,10 @@
             </div>
 
             <div class="tab-nav" id="collection-tabs">
-                <!-- Tabs will be generated here -->
-            </div>
+                </div>
         </div>
         <div id="collection-content">
-            <!-- Content will be generated here -->
-        </div>
+            </div>
     </section>
 </div>
 
@@ -380,7 +329,6 @@
 
     // Series 1 成就判定標準 (前端邏輯鎖定)
     const S1_TOTALS = { common: 28, rare: 14, super_rare: 9, special_limited: 2 };
-
     const EVENT_ACTIVE = true; 
 
     let currentUser = "";
@@ -388,7 +336,7 @@
         common: [], rare: [], super_rare: [], special_limited: [], 
         diamonds: 0, pity_rare_count: 0,
         rewards_claimed: { s1_common: false, s1_rare: false, s1_sr: false, s1_special: false }
-    }; 
+    };
     let lastLoginDate = null;
     let hasSpecialGlobal = false; // 是否解鎖金色名稱
     
@@ -405,7 +353,7 @@
         const savedName = localStorage.getItem('porkemon_username');
         if (savedName) {
             document.getElementById('username-input').value = savedName;
-            document.getElementById('btn-enter').click(); // 自動點擊進入，實現秒開
+            document.getElementById('btn-enter').click();
         }
 
         // 註冊 Service Worker
@@ -420,7 +368,6 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            // 只有未設定過玩家名稱(停留在首頁)時，才顯示安裝按鈕
             if (!savedName) {
                 const installBtn = document.getElementById('btn-install');
                 installBtn.classList.remove('hidden');
@@ -433,10 +380,9 @@
             }
         });
 
-        // PWA iOS 安裝引導 (判斷 Safari 且尚未加入主畫面)
+        // PWA iOS 安裝引導
         const isIos = () => /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
         const isInStandaloneMode = () => ('standalone' in window.navigator) && window.navigator.standalone;
-        
         if (isIos() && !isInStandaloneMode() && !savedName) {
             document.getElementById('ios-install-prompt').classList.remove('hidden');
         }
@@ -506,7 +452,6 @@
             }
 
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-
             if(isSlashing && slashPath.length > 1) {
                 pCtx.shadowBlur = 20;
                 pCtx.shadowColor = "#fff"; pCtx.strokeStyle = "#fff";
@@ -583,7 +528,7 @@
             currentCollectionData.diamonds = (currentCollectionData.diamonds || 0) + 30;
             if (currentCollectionData.diamonds > 999) currentCollectionData.diamonds = 999;
             lastLoginDate = now.toISOString();
-            currentCollectionData.lastLoginDate = lastLoginDate; 
+            currentCollectionData.lastLoginDate = lastLoginDate;
             setTimeout(() => { alert("🎉 每日登入獎勵！已領取 30 💎"); }, 200);
             return true;
         }
@@ -597,8 +542,7 @@
         nameEl.innerText = currentUser;
         titleEl.innerText = currentUser + " 的收藏";
         document.getElementById('display-diamonds').innerText = currentCollectionData.diamonds || 0;
-
-        // 金色名稱判斷
+        
         if (hasSpecialGlobal) {
             nameEl.classList.add('golden-name');
             titleEl.classList.add('golden-name');
@@ -633,20 +577,17 @@
 
         currentUser = nameVal;
         localStorage.setItem('porkemon_username', currentUser);
-        
         const btn = document.getElementById('btn-enter');
         btn.innerText = "連線資料庫中...";
         btn.disabled = true;
 
         try {
             if (!supabaseClient) throw new Error("資料庫模組未能啟動。");
-            
             const { data, error } = await supabaseClient
                 .from('user_collections')
                 .select('*')
                 .eq('username', currentUser)
                 .maybeSingle();
-            
             if (error) throw error;
 
             if (data) {
@@ -661,7 +602,6 @@
                 hasSpecialGlobal = false;
             }
 
-            // 防護結構初始化 (含獎勵狀態)
             if(!currentCollectionData.special_limited) currentCollectionData.special_limited = [];
             if(!currentCollectionData.super_rare) currentCollectionData.super_rare = [];
             if(!currentCollectionData.rare) currentCollectionData.rare = [];
@@ -679,7 +619,6 @@
             }
 
             updateDiamondUI();
-
             if (!data || isInitial || isUpdated) {
                 await saveUserData();
             }
@@ -705,7 +644,6 @@
     async function saveUserData() {
         if (!supabaseClient) return;
         currentCollectionData.lastLoginDate = lastLoginDate;
-
         try {
             await supabaseClient
                 .from('user_collections')
@@ -714,7 +652,7 @@
                     collection: currentCollectionData, 
                     diamonds: currentCollectionData.diamonds,
                     pity_rare_count: currentCollectionData.pity_rare_count,
-                    has_special: hasSpecialGlobal, // 儲存金色名稱資格
+                    has_special: hasSpecialGlobal, 
                     updated_at: new Date().toISOString() 
                 });
         } catch (err) {
@@ -772,22 +710,24 @@
 
                 selectedCards.sort(() => Math.random() - 0.5);
                 drawnCards = selectedCards;
-
             } else {
                 let hasRareOrAbove = false;
-
                 for(let i=0; i<10; i++) {
                     const rand = Math.random();
                     let cardType, maxId;
                     
                     if (EVENT_ACTIVE && rand < 0.005 && TOTAL_SPECIAL_LIMITED > 0) {
-                        cardType = 'special_limited'; maxId = TOTAL_SPECIAL_LIMITED; hasRareOrAbove = true;
+                        cardType = 'special_limited';
+                        maxId = TOTAL_SPECIAL_LIMITED; hasRareOrAbove = true;
                     } else if (rand < 0.015) { 
-                        cardType = 'super_rare'; maxId = TOTAL_SUPER_RARE; hasRareOrAbove = true;
+                        cardType = 'super_rare';
+                        maxId = TOTAL_SUPER_RARE; hasRareOrAbove = true;
                     } else if (rand < 0.045) { 
-                        cardType = 'rare'; maxId = TOTAL_RARE; hasRareOrAbove = true;
+                        cardType = 'rare';
+                        maxId = TOTAL_RARE; hasRareOrAbove = true;
                     } else {
-                        cardType = 'common'; maxId = TOTAL_COMMON;
+                        cardType = 'common';
+                        maxId = TOTAL_COMMON;
                     }
                     
                     const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
@@ -802,11 +742,12 @@
                         let pRand = Math.random();
                         let pType = 'rare'; 
                         let pMax = TOTAL_RARE;
-                        
                         if (EVENT_ACTIVE && pRand < 0.005 && TOTAL_SPECIAL_LIMITED > 0) {
-                            pType = 'special_limited'; pMax = TOTAL_SPECIAL_LIMITED;
+                            pType = 'special_limited';
+                            pMax = TOTAL_SPECIAL_LIMITED;
                         } else if (pRand < 0.015) {
-                            pType = 'super_rare'; pMax = TOTAL_SUPER_RARE;
+                            pType = 'super_rare';
+                            pMax = TOTAL_SUPER_RARE;
                         }
                         
                         let pId = Math.floor(Math.random() * pMax + 1).toString().padStart(3, '0');
@@ -823,13 +764,17 @@
             let cardType, maxId;
             
             if (EVENT_ACTIVE && rand < 0.005 && TOTAL_SPECIAL_LIMITED > 0) {
-                cardType = 'special_limited'; maxId = TOTAL_SPECIAL_LIMITED;
+                cardType = 'special_limited';
+                maxId = TOTAL_SPECIAL_LIMITED;
             } else if (rand < 0.015) { 
-                cardType = 'super_rare'; maxId = TOTAL_SUPER_RARE;
+                cardType = 'super_rare';
+                maxId = TOTAL_SUPER_RARE;
             } else if (rand < 0.045) { 
-                cardType = 'rare'; maxId = TOTAL_RARE;
+                cardType = 'rare';
+                maxId = TOTAL_RARE;
             } else {
-                cardType = 'common'; maxId = TOTAL_COMMON;
+                cardType = 'common';
+                maxId = TOTAL_COMMON;
             }
             
             const cardId = Math.floor(Math.random() * maxId + 1).toString().padStart(3, '0');
@@ -847,6 +792,7 @@
             let offsetX = num > 1 ? (Math.random()-0.5)*20 : 0;
             let offsetY = num > 1 ? (Math.random()-0.5)*20 : 0;
             wrap.style.transform = `translate(${offsetX}px, ${offsetY}px) rotate(${(Math.random()-0.5)*4}deg)`;
+            
             wrap.innerHTML = `
                 <div class="pack-half split-left" style="background-image:url(${IMG_PACK})"></div>
                 <div class="pack-half split-right" style="background-image:url(${IMG_PACK})"></div>
@@ -865,6 +811,7 @@
         if(document.getElementById('slash-zone').classList.contains('hidden')) return;
         isSlashing = true; slashPath = [{x: e.touches[0].clientX, y: e.touches[0].clientY}];
     });
+
     uiLayer.addEventListener('touchmove', (e) => {
         if(!isSlashing) return;
         const x = e.touches[0].clientX; const y = e.touches[0].clientY;
@@ -876,12 +823,13 @@
             isSlashing = false;
         }
     });
+
     uiLayer.addEventListener('touchend', () => { isSlashing = false; slashPath = []; });
 
     function executeCut() {
         document.getElementById('slash-zone').classList.add('hidden');
         const packs = document.querySelectorAll('.pack-wrapper');
-        
+
         let hasSpecial = drawnCards.some(c => c.type === 'special_limited');
         let hasSuperRare = drawnCards.some(c => c.type === 'super_rare');
         let hasRare = drawnCards.some(c => c.type === 'rare');
@@ -937,14 +885,15 @@
             else if (idx < 7) { y = '55%'; x = `${15 + (idx - 3) * 23.33}%`; } 
             else { y = '80%'; x = `${20 + (idx - 7) * 30}%`; }
             
-            container.style.left = x; container.style.top = y;
+            container.style.left = x;
+            container.style.top = y;
         } else {
-            container.style.left = '50%'; container.style.top = '50%';
+            container.style.left = '50%';
+            container.style.top = '50%';
             tscale = '1.2';
         }
 
         container.style.setProperty('--tx', tx); container.style.setProperty('--ty', ty); container.style.setProperty('--tscale', tscale);
-        
         let cardBackStyle = `background-image:url('${IMG_BACK}'); background-size: 100% 100%;`;
         
         if (result.isGodPack) {
@@ -958,6 +907,7 @@
         }
         
         const frontImgSrc = `${BASE_URL}cards_${result.type}/${result.id}.PNG`;
+
         container.innerHTML = `
             <div class="card-inner" onclick="flipCard(event, this, '${result.type}', '${result.id}')">
                 <div class="card-back" style="${cardBackStyle}"></div>
@@ -1067,7 +1017,8 @@
         const hint = document.getElementById('save-hint');
         
         try {
-            hint.innerText = "下載中..."; hint.style.opacity = '1';
+            hint.innerText = "下載中...";
+            hint.style.opacity = '1';
             const response = await fetch(imgSrc);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -1152,7 +1103,7 @@
             sr: currentCollectionData.super_rare.filter(id => parseInt(id) <= S1_TOTALS.super_rare).length,
             special: currentCollectionData.special_limited.filter(id => parseInt(id) <= S1_TOTALS.special_limited).length
         };
-        
+
         // 進度條只計算 普通、稀有、超級稀有 (不納入特別限定)
         let totalProgressOwned = counts.common + counts.rare + counts.sr;
         let totalProgressBar = S1_TOTALS.common + S1_TOTALS.rare + S1_TOTALS.super_rare;
@@ -1222,7 +1173,6 @@
         }
         
         if (currentCollectionData.diamonds > 999) currentCollectionData.diamonds = 999;
-        
         updateDiamondUI();
         updateRewardsUI();
         await saveUserData();
@@ -1232,7 +1182,7 @@
         const tabNav = document.getElementById('collection-tabs');
         const content = document.getElementById('collection-content');
         let data = currentCollectionData || { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 0, pity_rare_count: 0 };
-        
+
         updateRewardsUI();
 
         tabNav.innerHTML = "";
