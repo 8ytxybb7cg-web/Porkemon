@@ -114,7 +114,12 @@
             transition: bottom 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none;
         }
         /* 提升 pack 底部高度，並加入 safe-area 適配 */
-        .pack-wrapper.active { bottom: calc(10% + env(safe-area-inset-bottom)); pointer-events: auto; }
+        .pack-wrapper.active { bottom: calc(15% + env(safe-area-inset-bottom)); pointer-events: auto; }
+        
+        /* PWA 專屬：向下調整卡包位置，防止遮擋上方用戶名及鑽石資訊 */
+        @media all and (display-mode: standalone) {
+            .pack-wrapper.active { bottom: calc(2% + env(safe-area-inset-bottom)); }
+        }
         
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -124,8 +129,8 @@
         .split-left { clip-path: polygon(0 0, 100% 0, 0 100%); }
         .split-right { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
 
-        /* 偵測區域 */
-        #slash-zone { position: absolute; top: 0; left: 15%; width: 70%; height: 70%; z-index: 200; pointer-events: auto; }
+        /* 偵測區域 (將感應範圍從 35% 擴大至 70%，並稍微向下偏移，讓玩家能於底部按鈕附近直接切開) */
+        #slash-zone { position: absolute; top: 10%; left: 15%; width: 70%; height: 70%; z-index: 200; pointer-events: auto; }
 
         /* 3D 翻轉卡片容器 */
         .card-container {
