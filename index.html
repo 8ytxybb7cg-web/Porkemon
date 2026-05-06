@@ -1150,95 +1150,133 @@
         document.getElementById('share-backdrop').classList.remove('open');
     }
 
+    // -------------------------------------------------------
+    // 核心修正：用 fetch → objectURL 載入圖片，完全繞開
+    // canvas CORS taint 問題（直接用 crossOrigin 屬性在
+    // CDN 圖片上幾乎必然觸發 SecurityError）
+    // -------------------------------------------------------
+    async function fetchImageAsBitmap(url) {
+        const resp = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+        if (!resp.ok) throw new Error(`fetch failed: ${resp.status}`);
+        const blob = await resp.blob();
+        const objUrl = URL.createObjectURL(blob);
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => { URL.revokeObjectURL(objUrl); resolve(img); };
+            img.onerror = (e) => { URL.revokeObjectURL(objUrl); reject(e); };
+            img.src = objUrl;
+        });
+    }
+
     async function buildShareCanvas() {
         const W = 600, H = 840;
         const canvas = document.createElement('canvas');
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
 
+        const cardImgEl = document.getElementById('fullscreen-card-img');
+        const cardSrc   = cardImgEl.src;
+        const cardType  = cardImgEl.dataset.type || 'common';
+
+        // 預先用 fetch-blob 方式載入兩張圖，避免 canvas taint
+        const [backBitmap, cardBitmap] = await Promise.all([
+            fetchImageAsBitmap(IMG_BACK),
+            fetchImageAsBitmap(cardSrc)
+        ]);
+
         // 1. 黑色背景漸層
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, W, H);
-        const grad = ctx.createRadialGradient(W/2, H/3, 40, W/2, H/3, W*0.8);
+        const grad = ctx.createRadialGradient(W/2, H/3, 40, W/2, H/3, W * 0.8);
         grad.addColorStop(0, '#1a1a1a');
         grad.addColorStop(1, '#000');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, W, H);
 
         // 2. 飛舞的光點（靜態快照）
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
-        for(let i = 0; i < 60; i++) {
-            const px = Math.random() * W;
-            const py = Math.random() * H;
-            const ps = Math.random() * 2;
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        for (let i = 0; i < 70; i++) {
             ctx.beginPath();
-            ctx.arc(px, py, ps, 0, Math.PI * 2);
+            ctx.arc(Math.random() * W, Math.random() * H, Math.random() * 2.2, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // 3. 飛舞的 back.png（半透明，隨機位置與角度）
-        await new Promise(resolve => {
-            if (backImgObj.complete) { resolve(); return; }
-            backImgObj.onload = resolve;
-        });
-        for(let i = 0; i < 10; i++) {
-            const bx = Math.random() * W;
-            const by = Math.random() * H;
-            const br = Math.random() * Math.PI * 2;
-            const bs = 0.3 + Math.random() * 0.4;
+        for (let i = 0; i < 10; i++) {
+            const bs = 0.3 + Math.random() * 0.45;
             const bw = 100 * bs, bh = 140 * bs;
             ctx.save();
-            ctx.translate(bx, by);
-            ctx.rotate(br);
+            ctx.translate(Math.random() * W, Math.random() * H);
+            ctx.rotate(Math.random() * Math.PI * 2);
             ctx.globalAlpha = 0.18;
-            ctx.drawImage(backImgObj, -bw/2, -bh/2, bw, bh);
+            ctx.drawImage(backBitmap, -bw / 2, -bh / 2, bw, bh);
             ctx.restore();
         }
         ctx.globalAlpha = 1;
 
-        // 4. 主卡牌圖片（置中，佔約 55% 高度）
-        const cardImg = document.getElementById('fullscreen-card-img');
-        const cardSrc = cardImg.src;
-        await new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                const cardH = H * 0.55;
-                const cardW = cardH * (63 / 88);
-                const cx = (W - cardW) / 2;
-                const cy = (H - cardH) / 2;
+        // 4. 主卡牌圖片（置中，佔約 55% 高度）+ 光環
+        const cardH = H * 0.55;
+        const cardW = cardH * (63 / 88);
+        const cx = (W - cardW) / 2;
+        const cy = (H - cardH) / 2;
 
-                // 光環
-                const type = cardImg.dataset.type || 'common';
-                let glowColor = '#0055ff';
-                if (type === 'special_limited') glowColor = '#ff0000';
-                else if (type === 'super_rare') glowColor = '#ffd700';
-                else if (type === 'rare') glowColor = '#a020f0';
+        let glowColor = '#0055ff';
+        if (cardType === 'special_limited') glowColor = '#ff0000';
+        else if (cardType === 'super_rare')  glowColor = '#ffd700';
+        else if (cardType === 'rare')        glowColor = '#a020f0';
 
-                ctx.save();
-                ctx.shadowBlur = 40;
-                ctx.shadowColor = glowColor;
-                ctx.drawImage(img, cx, cy, cardW, cardH);
-                ctx.restore();
+        ctx.save();
+        ctx.shadowBlur  = 45;
+        ctx.shadowColor = glowColor;
+        // 繪製多次疊加光暈效果
+        for (let g = 0; g < 3; g++) ctx.drawImage(cardBitmap, cx, cy, cardW, cardH);
+        ctx.restore();
 
-                // 圓角遮罩
-                ctx.save();
-                ctx.globalCompositeOperation = 'destination-atop';
-                ctx.restore();
-
-                resolve();
-            };
-            img.onerror = reject;
-            img.src = cardSrc;
-        });
+        // 圓角遮罩（clip 卡牌區域）
+        const r = 16;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(cx + r, cy);
+        ctx.lineTo(cx + cardW - r, cy);
+        ctx.quadraticCurveTo(cx + cardW, cy, cx + cardW, cy + r);
+        ctx.lineTo(cx + cardW, cy + cardH - r);
+        ctx.quadraticCurveTo(cx + cardW, cy + cardH, cx + cardW - r, cy + cardH);
+        ctx.lineTo(cx + r, cy + cardH);
+        ctx.quadraticCurveTo(cx, cy + cardH, cx, cy + cardH - r);
+        ctx.lineTo(cx, cy + r);
+        ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(cardBitmap, cx, cy, cardW, cardH);
+        ctx.restore();
 
         // 5. 浮水印
         ctx.font = 'bold 22px "Microsoft JhengHei", sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.fillStyle = 'rgba(255,255,255,0.38)';
         ctx.textAlign = 'center';
-        ctx.fillText('Porkémon', W/2, H - 28);
+        ctx.fillText('Porkémon', W / 2, H - 28);
 
         return canvas;
+    }
+
+    // canvas → Blob（Promise 包裝）
+    function canvasToBlob(canvas) {
+        return new Promise((resolve, reject) => {
+            canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/png');
+        });
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
+    }
+
+    function downloadCanvasAsFile(canvas) {
+        canvasToBlob(canvas).then(blob => downloadBlob(blob, 'Porkemon_card.png')).catch(console.error);
     }
 
     async function shareToApp(target) {
@@ -1247,87 +1285,70 @@
         hint.innerText = "合成圖片中...";
         hint.style.opacity = '1';
 
+        let canvas;
         try {
-            const canvas = await buildShareCanvas();
-
-            if (target === 'copy') {
-                // 複製圖片到剪貼板
-                canvas.toBlob(async (blob) => {
-                    try {
-                        await navigator.clipboard.write([
-                            new ClipboardItem({ 'image/png': blob })
-                        ]);
-                        hint.innerText = "圖片已複製到剪貼板！";
-                        setTimeout(() => hint.style.opacity = '0', 2500);
-                    } catch(e) {
-                        // fallback: 下載
-                        downloadCanvasAsFile(canvas);
-                        hint.innerText = "已下載圖片";
-                        setTimeout(() => hint.style.opacity = '0', 2500);
-                    }
-                }, 'image/png');
-                return;
-            }
-
-            // 其他平台：使用 Web Share API 或 fallback 下載
-            canvas.toBlob(async (blob) => {
-                const file = new File([blob], 'Porkemon_card.png', { type: 'image/png' });
-                const shareData = {
-                    files: [file],
-                    title: 'Porkémon 卡片',
-                    text: '看我抽到的 Porkémon 卡！🐷✨'
-                };
-
-                if (navigator.canShare && navigator.canShare(shareData)) {
-                    try {
-                        await navigator.share(shareData);
-                        hint.style.opacity = '0';
-                    } catch(e) {
-                        if (e.name !== 'AbortError') {
-                            fallbackShareUrl(target, canvas);
-                        } else {
-                            hint.style.opacity = '0';
-                        }
-                    }
-                } else {
-                    // 不支援 Web Share API，嘗試 URL scheme
-                    fallbackShareUrl(target, canvas);
-                }
-            }, 'image/png');
-
+            canvas = await buildShareCanvas();
         } catch (err) {
-            console.error('分享失敗:', err);
-            hint.innerText = "分享失敗，請長按圖片儲存";
+            console.error('buildShareCanvas 失敗:', err);
+            hint.innerText = "合成失敗，請長按圖片儲存";
             setTimeout(() => hint.style.opacity = '0', 3000);
+            return;
         }
-    }
 
-    function downloadCanvasAsFile(canvas) {
-        const a = document.createElement('a');
-        a.download = 'Porkemon_card.png';
-        a.href = canvas.toDataURL('image/png');
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    }
-
-    function fallbackShareUrl(target, canvas) {
-        // 先下載圖片，再開啟對應 app（用戶可手動貼上）
-        downloadCanvasAsFile(canvas);
-        const hint = document.getElementById('save-hint');
-
-        const urls = {
-            whatsapp: 'https://wa.me/',
-            instagram: 'https://www.instagram.com/',
-            threads: 'https://www.threads.net/',
-            x: 'https://twitter.com/intent/tweet?text=' + encodeURIComponent('看我抽到的 Porkémon 卡！🐷✨')
-        };
-
-        setTimeout(() => {
-            if (urls[target]) window.open(urls[target], '_blank');
-            hint.innerText = "圖片已下載，請在 App 中貼上";
+        let blob;
+        try {
+            blob = await canvasToBlob(canvas);
+        } catch (err) {
+            console.error('canvasToBlob 失敗:', err);
+            hint.innerText = "圖片輸出失敗，請稍後再試";
             setTimeout(() => hint.style.opacity = '0', 3000);
-        }, 500);
+            return;
+        }
+
+        // ── 複製圖片到剪貼板 ──────────────────────────────
+        if (target === 'copy') {
+            try {
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                hint.innerText = "✅ 圖片已複製到剪貼板！";
+            } catch (e) {
+                // 剪貼板 API 不支援時改為下載
+                downloadBlob(blob, 'Porkemon_card.png');
+                hint.innerText = "已下載圖片（剪貼板不支援）";
+            }
+            setTimeout(() => hint.style.opacity = '0', 2800);
+            return;
+        }
+
+        // ── 其他平台：Web Share API（含檔案分享）──────────
+        const file = new File([blob], 'Porkemon_card.png', { type: 'image/png' });
+        const shareData = { files: [file], title: 'Porkémon 卡片', text: '看我抽到的 Porkémon 卡！🐷✨' };
+
+        if (navigator.canShare && navigator.canShare(shareData)) {
+            try {
+                await navigator.share(shareData);
+                hint.style.opacity = '0';
+                return;
+            } catch (e) {
+                if (e.name === 'AbortError') { hint.style.opacity = '0'; return; }
+                // 其他錯誤走 fallback
+            }
+        }
+
+        // ── Fallback：下載圖片 + 開啟對應 App ──────────────
+        downloadBlob(blob, 'Porkemon_card.png');
+
+        const appUrls = {
+            whatsapp:  'https://wa.me/',
+            instagram: 'https://www.instagram.com/',
+            threads:   'https://www.threads.net/',
+            x:         'https://twitter.com/intent/tweet?text=' + encodeURIComponent('看我抽到的 Porkémon 卡！🐷✨')
+        };
+        setTimeout(() => {
+            if (appUrls[target]) window.open(appUrls[target], '_blank');
+        }, 600);
+
+        hint.innerText = "📥 圖片已下載，請到 App 中貼上分享";
+        setTimeout(() => hint.style.opacity = '0', 3500);
     }
 
     // ==========================================
