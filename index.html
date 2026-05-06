@@ -174,12 +174,19 @@
             gap: 10px; pointer-events: auto; z-index: 250; padding: 0 10px; box-sizing: border-box;
         }
         .draw-btn { 
-            background: #fff; color: #000; border: none; padding: 10px 5px; font-size: 14px; 
-            font-weight: bold; border-radius: 25px; cursor: pointer; white-space: nowrap; flex: 1;
-            text-align: center; min-width: 0; 
-        }
-        
-        .pill-btn { background: transparent; color: #fff; border: 2px solid #fff; border-radius: 50px; padding: 8px 20px; font-size: 16px; font-weight: bold; cursor: pointer; pointer-events: auto; }
+             background: #fff; color: #000; border: none; padding: 10px 5px; font-size: 14px; 
+             font-weight: bold; border-radius: 25px; cursor: pointer; white-space: nowrap; flex: 1;
+             text-align: center; min-width: 0; position: relative;
+         }
+         
+         #collection-badge {
+             position: absolute; top: -2px; right: 5px; width: 12px; height: 12px;
+             background: linear-gradient(45deg, #ffd700, #ff8800);
+             border-radius: 50%; border: 2px solid #000; display: none;
+             box-shadow: 0 0 5px #ffaa00; z-index: 10; pointer-events: none;
+         }
+ 
+         .pill-btn { background: transparent; color: #fff; border: 2px solid #fff; border-radius: 50px; padding: 8px 20px; font-size: 16px; font-weight: bold; cursor: pointer; pointer-events: auto; }
 
         /* 收藏頁面 */
         #collection-screen { justify-content: flex-start; padding-top: calc(20px + env(safe-area-inset-top)); overflow: hidden; box-sizing: border-box; }
@@ -292,10 +299,13 @@
         </div>
         
         <div class="bottom-nav hidden" id="action-buttons">
-            <button class="draw-btn" onclick="prepareDraw(1)">單抽 3💎</button>
-            <button class="draw-btn" onclick="prepareDraw(10)">十連 27💎</button>
-            <button class="draw-btn" style="background:none; color:white; border:1px solid white;" onclick="showScreen('collection-screen')">收藏</button>
-        </div>
+             <button class="draw-btn" onclick="prepareDraw(1)">單抽 3💎</button>
+             <button class="draw-btn" onclick="prepareDraw(10)">十連 27💎</button>
+             <button class="draw-btn" style="background:none; color:white; border:1px solid white;" onclick="showScreen('collection-screen')">
+                 收藏
+                 <div id="collection-badge"></div>
+             </button>
+         </div>
     </section>
 
     <section id="collection-screen" class="screen hidden">
@@ -598,23 +608,50 @@
         return false;
     }
 
-    function updateDiamondUI() {
-        const nameEl = document.getElementById('display-username');
+    function checkUnclaimedRewards() {
+         if (!currentCollectionData || !currentCollectionData.rewards_claimed) return false;
+         
+         let counts = {
+             common: (currentCollectionData.common || []).filter(id => parseInt(id) <= S1_TOTALS.common).length,
+             rare: (currentCollectionData.rare || []).filter(id => parseInt(id) <= S1_TOTALS.rare).length,
+             sr: (currentCollectionData.super_rare || []).filter(id => parseInt(id) <= S1_TOTALS.super_rare).length,
+             special: (currentCollectionData.special_limited || []).filter(id => parseInt(id) <= S1_TOTALS.special_limited).length
+         };
+         
+         if (counts.common >= S1_TOTALS.common && !currentCollectionData.rewards_claimed.s1_common) return true;
+         if (counts.rare >= S1_TOTALS.rare && !currentCollectionData.rewards_claimed.s1_rare) return true;
+         if (counts.sr >= S1_TOTALS.super_rare && !currentCollectionData.rewards_claimed.s1_sr) return true;
+         
+         let totalProgressOwned = counts.common + counts.rare + counts.sr;
+         let totalProgressBar = S1_TOTALS.common + S1_TOTALS.rare + S1_TOTALS.super_rare;
+         if (totalProgressOwned === totalProgressBar && counts.special >= S1_TOTALS.special_limited && !currentCollectionData.rewards_claimed.s1_special) return true;
+         
+         return false;
+     }
+ 
+     function updateDiamondUI() {
+         const nameEl = document.getElementById('display-username');
         const titleEl = document.getElementById('user-title');
         
         nameEl.innerText = currentUser;
         titleEl.innerText = currentUser + " 的收藏";
         document.getElementById('display-diamonds').innerText = currentCollectionData.diamonds || 0;
         if (hasSpecialGlobal) {
-            nameEl.classList.add('golden-name');
-            titleEl.classList.add('golden-name');
-        } else {
-            nameEl.classList.remove('golden-name');
-            titleEl.classList.remove('golden-name');
-        }
-    }
+             nameEl.classList.add('golden-name');
+             titleEl.classList.add('golden-name');
+         } else {
+             nameEl.classList.remove('golden-name');
+             titleEl.classList.remove('golden-name');
+         }
+ 
+         const badge = document.getElementById('collection-badge');
+         if (badge) {
+             badge.style.display = checkUnclaimedRewards() ? 'block' : 'none';
+         }
+     }
+ 
+     function showScreen(id) {
 
-    function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
 
@@ -1319,37 +1356,30 @@
             return;
         }
 
-        // ── 其他平台：Web Share API（含檔案分享）──────────
-        const file = new File([blob], 'Porkemon_card.png', { type: 'image/png' });
-        const shareData = { files: [file], title: 'Porkémon 卡片', text: '看我抽到的 Porkémon 卡！🐷✨' };
-
-        if (navigator.canShare && navigator.canShare(shareData)) {
-            try {
-                await navigator.share(shareData);
-                hint.style.opacity = '0';
-                return;
-            } catch (e) {
-                if (e.name === 'AbortError') { hint.style.opacity = '0'; return; }
-                // 其他錯誤走 fallback
-            }
-        }
-
-        // ── Fallback：下載圖片 + 開啟對應 App ──────────────
-        downloadBlob(blob, 'Porkemon_card.png');
-
-        const appUrls = {
-            whatsapp:  'https://wa.me/',
-            instagram: 'https://www.instagram.com/',
-            threads:   'https://www.threads.net/',
-            x:         'https://twitter.com/intent/tweet?text=' + encodeURIComponent('看我抽到的 Porkémon 卡！🐷✨')
-        };
-        setTimeout(() => {
-            if (appUrls[target]) window.open(appUrls[target], '_blank');
-        }, 600);
-
-        hint.innerText = "📥 圖片已下載，請到 App 中貼上分享";
-        setTimeout(() => hint.style.opacity = '0', 3500);
-    }
+        // ── 繞過原生分享選單：直接下載圖片 + 開啟對應 App ──────────────
+         // 由於無法透過純網頁直接將圖片塞入外部 App 的發文介面，
+         // 統一流程：1. 下載圖片至相簿 -> 2. 開啟指定 App -> 3. 用戶手動選圖貼上
+         downloadBlob(blob, 'Porkemon_card.png');
+ 
+         const shareText = encodeURIComponent('看我抽到的 Porkémon 卡！🐷✨');
+         const appUrls = {
+             whatsapp:  `https://wa.me/?text=${shareText}`,
+             instagram: 'instagram://',
+             threads:   `https://www.threads.net/intent/post?text=${shareText}`,
+             x:         `https://twitter.com/intent/tweet?text=${shareText}`
+         };
+ 
+         setTimeout(() => {
+             if (target === 'instagram') {
+                 window.location.href = appUrls[target];
+             } else if (appUrls[target]) {
+                 window.open(appUrls[target], '_blank');
+             }
+         }, 600);
+ 
+         hint.innerText = "📥 圖片已儲存！請在 App 內選取圖片分享";
+         setTimeout(() => hint.style.opacity = '0', 3500);
+     }
 
     // ==========================================
     // 6. 收藏與系列獎勵系統
