@@ -100,35 +100,36 @@
         #stage { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: auto; }
 
         /* ==============================
-           修改重點：卡包全螢幕最大化與比例鎖定
+           修改 4：PWA 卡包尺寸限制 ~80% 螢幕
+           網頁版維持原本全螢幕最大化，PWA 才縮小
            ============================== */
         .pack-wrapper {
             position: absolute;
-            /* 絕對居中定位 */
             top: 0; bottom: 0; left: 0; right: 0; margin: auto;
-            
-            /* 鎖定 70:135 (實物) 比例 */
             aspect-ratio: 70 / 135; 
-            
-            /* 動態計算容器最大化尺寸，確保在任何螢幕都不會溢出並達到最大顯示 */
+            /* 預設（網頁）維持原本行為 */
             width: min(100vw, 100dvh * (70 / 135));
             height: min(100dvh, 100vw * (135 / 70));
-            
-            /* 進場動畫設定：結合 translateY 將其藏在畫面下方，並保留 CSS 變數供隨機位移使用 */
             transform: translateY(150dvh) translate(var(--ox, 0px), var(--oy, 0px)) rotate(var(--rot, 0deg));
             transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             pointer-events: none;
         }
         
+        /* PWA 模式：限制卡包約 80% 螢幕，避免遮住狀態列 */
+        @media all and (display-mode: standalone) {
+            .pack-wrapper {
+                width: min(80vw, 80dvh * (70 / 135));
+                height: min(80dvh, 80vw * (135 / 70));
+            }
+        }
+        
         .pack-wrapper.active { 
-            /* 進場後解除 translateY，恢復為正確置中狀態與隨機偏移 */
             transform: translate(var(--ox, 0px), var(--oy, 0px)) rotate(var(--rot, 0deg));
             pointer-events: auto; 
         }
         
         .pack-half {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            /* 採用 100% 100% 確保圖片配合 aspect-ratio 完美填滿且不裁切 */
             background-size: 100% 100%; 
             background-position: center; background-repeat: no-repeat;
             transition: transform 0.8s ease-in, opacity 0.8s ease-in;
@@ -139,9 +140,16 @@
         /* 偵測區域：放大以適應全螢幕卡包 */
         #slash-zone { position: absolute; top: 10%; left: 15%; width: 70%; height: 80%; z-index: 200; pointer-events: auto; }
 
-        /* 3D 翻轉卡片容器 */
+        /* ==============================
+           修改 1 & 2：十連抽卡牌尺寸與間距調整
+           放大縮圖、縮短上下間距、底排與按鍵拉開距離
+           ============================== */
         .card-container {
-            position: absolute; width: 45dvh; max-width: 250px; aspect-ratio: 63/88; 
+            position: absolute;
+            /* 修改 2：放大至 28vw，最大值提升至 120px */
+            width: 28vw;
+            max-width: 120px;
+            aspect-ratio: 63/88; 
             perspective: 1000px; display: none; z-index: 100; opacity: 0;
             transition: opacity 1s ease-out, transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transform: translate(-50%, calc(-50% + 50px)) scale(0.5); 
@@ -162,7 +170,7 @@
         /* 底部導航 & 共用 Pill 形按鈕 */
         .bottom-nav { 
             position: absolute; bottom: calc(25px + env(safe-area-inset-bottom));
-            width: 90%; max-width: 400px; display: flex; justify-content: space-between; align-items: center;
+            width: 90%; max-width: 400px; display: flex; justify-content: space-between; align-items: center; 
             gap: 10px; pointer-events: auto; z-index: 250; padding: 0 10px; box-sizing: border-box;
         }
         .draw-btn { 
@@ -207,7 +215,9 @@
         .card-slot { width: 100%; aspect-ratio: 63/88; background: #222; border-radius: 5px; overflow: hidden; position: relative; }
         .card-slot img { width: 100%; height: 100%; object-fit: fill; }
 
-        /* 全螢幕放大預覽 */
+        /* ==============================
+           修改 3：全螢幕放大預覽 + 分享功能
+           ============================== */
         #fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
         #fullscreen-overlay.active { opacity: 1; pointer-events: auto; }
         
@@ -215,8 +225,33 @@
 
         .long-press-hint { color: #fff; margin-top: 15px; font-size: 16px; font-weight: bold; text-align: center; letter-spacing: 1px; }
         #save-hint { color: #fff; margin-top: 5px; font-size: 14px; font-weight: bold; opacity: 0; transition: opacity 0.3s ease; height: 20px; }
-        .overlay-controls { margin-top: 10px; display: flex; gap: 15px; pointer-events: auto; }
+        .overlay-controls { margin-top: 10px; display: flex; gap: 10px; pointer-events: auto; flex-wrap: wrap; justify-content: center; }
         
+        /* 分享面板 */
+        #share-panel {
+            position: fixed; bottom: 0; left: 0; width: 100%; z-index: 10001;
+            background: rgba(20,20,20,0.97); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.15); border-radius: 20px 20px 0 0;
+            padding: 20px 20px calc(20px + env(safe-area-inset-bottom)) 20px;
+            transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.175,0.885,0.32,1.1);
+            box-sizing: border-box;
+        }
+        #share-panel.open { transform: translateY(0); }
+        #share-panel-title { text-align: center; font-size: 16px; color: rgba(255,255,255,0.6); margin-bottom: 18px; }
+        .share-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .share-item { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; pointer-events: auto; }
+        .share-icon { width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; transition: transform 0.15s; }
+        .share-icon:active { transform: scale(0.9); }
+        .share-label { font-size: 11px; color: rgba(255,255,255,0.7); white-space: nowrap; }
+        .share-icon.whatsapp { background: #25D366; }
+        .share-icon.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+        .share-icon.threads { background: #000; border: 1px solid #444; }
+        .share-icon.x-twitter { background: #000; border: 1px solid #444; }
+        .share-icon.copy-link { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); }
+        #share-panel-close { width: 100%; margin-top: 16px; padding: 12px; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 16px; border-radius: 12px; cursor: pointer; }
+        #share-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 10000; display: none; }
+        #share-backdrop.open { display: block; }
+
         /* 浮動加鑽動畫 */
         .float-text { position: fixed; color: #00ffff; font-weight: bold; font-size: 24px; text-shadow: 0 0 5px #000; z-index: 1000; pointer-events: none; transition: all 1s ease-out; opacity: 1; }
         
@@ -296,9 +331,51 @@
     <div class="long-press-hint">長按圖片可進行儲存</div>
     <div id="save-hint"></div>
     <div class="overlay-controls">
+        <button class="pill-btn" onclick="openSharePanel()">分享</button>
         <button class="pill-btn" onclick="downloadImage()">儲存</button>
         <button class="pill-btn" onclick="closeFullscreen()">返回</button>
     </div>
+</div>
+
+<!-- 分享遮罩 -->
+<div id="share-backdrop" onclick="closeSharePanel()"></div>
+
+<!-- 分享面板 -->
+<div id="share-panel">
+    <div id="share-panel-title">分享卡片</div>
+    <div class="share-grid">
+        <div class="share-item" onclick="shareToApp('whatsapp')">
+            <div class="share-icon whatsapp">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="white"><path d="M16 2C8.28 2 2 8.28 2 16c0 2.46.66 4.78 1.8 6.78L2 30l7.44-1.76C11.3 29.36 13.6 30 16 30c7.72 0 14-6.28 14-14S23.72 2 16 2zm0 25.5c-2.18 0-4.22-.6-5.96-1.64l-.42-.26-4.42 1.04 1.08-4.28-.28-.44A11.46 11.46 0 014.5 16C4.5 9.6 9.6 4.5 16 4.5S27.5 9.6 27.5 16 22.4 27.5 16 27.5zm6.3-8.56c-.34-.18-2.02-1-2.34-1.1-.32-.12-.54-.18-.78.18-.22.34-.88 1.1-1.08 1.32-.2.22-.4.24-.74.08-.34-.18-1.44-.54-2.74-1.7-1.02-.9-1.7-2.02-1.9-2.36-.2-.34-.02-.52.14-.68.16-.16.34-.4.52-.6.18-.2.22-.34.34-.56.12-.22.06-.42-.02-.6-.08-.18-.78-1.88-1.06-2.56-.28-.68-.56-.58-.78-.6H11.9c-.22 0-.58.08-.88.4-.3.32-1.14 1.1-1.14 2.7s1.16 3.14 1.32 3.36c.18.22 2.3 3.5 5.56 4.9.78.34 1.38.54 1.86.68.78.24 1.5.2 2.06.12.62-.1 1.92-.78 2.2-1.54.28-.76.28-1.4.2-1.54-.08-.14-.3-.22-.62-.4z"/></svg>
+            </div>
+            <span class="share-label">WhatsApp</span>
+        </div>
+        <div class="share-item" onclick="shareToApp('instagram')">
+            <div class="share-icon instagram">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="white"><path d="M16 2.88c4.28 0 4.78.02 6.46.1 1.56.06 2.4.32 2.96.52.74.28 1.28.62 1.84 1.18.56.56.9 1.1 1.18 1.84.2.56.46 1.4.52 2.96.08 1.68.1 2.18.1 6.46s-.02 4.78-.1 6.46c-.06 1.56-.32 2.4-.52 2.96a4.94 4.94 0 01-1.18 1.84c-.56.56-1.1.9-1.84 1.18-.56.2-1.4.46-2.96.52-1.68.08-2.18.1-6.46.1s-4.78-.02-6.46-.1c-1.56-.06-2.4-.32-2.96-.52a4.94 4.94 0 01-1.84-1.18 4.94 4.94 0 01-1.18-1.84c-.2-.56-.46-1.4-.52-2.96C2.9 20.78 2.88 20.28 2.88 16s.02-4.78.1-6.46c.06-1.56.32-2.4.52-2.96A4.94 4.94 0 014.68 4.7 4.94 4.94 0 016.52 3.5c.56-.2 1.4-.46 2.96-.52C11.22 2.9 11.72 2.88 16 2.88M16 0c-4.34 0-4.88.02-6.58.1C7.74.18 6.54.46 5.48.88A7.82 7.82 0 002.62 2.62 7.82 7.82 0 00.88 5.48C.46 6.54.18 7.74.1 9.42.02 11.12 0 11.66 0 16s.02 4.88.1 6.58c.08 1.68.36 2.88.78 3.94a7.82 7.82 0 001.74 2.86 7.82 7.82 0 002.86 1.74c1.06.42 2.26.7 3.94.78C11.12 31.98 11.66 32 16 32s4.88-.02 6.58-.1c1.68-.08 2.88-.36 3.94-.78a7.82 7.82 0 002.86-1.74 7.82 7.82 0 001.74-2.86c.42-1.06.7-2.26.78-3.94.08-1.7.1-2.24.1-6.58s-.02-4.88-.1-6.58c-.08-1.68-.36-2.88-.78-3.94a7.82 7.82 0 00-1.74-2.86A7.82 7.82 0 0026.52.88C25.46.46 24.26.18 22.58.1 20.88.02 20.34 0 16 0zm0 7.78a8.22 8.22 0 100 16.44A8.22 8.22 0 0016 7.78zm0 13.54a5.32 5.32 0 110-10.64 5.32 5.32 0 010 10.64zm8.54-13.86a1.92 1.92 0 100 3.84 1.92 1.92 0 000-3.84z"/></svg>
+            </div>
+            <span class="share-label">Instagram</span>
+        </div>
+        <div class="share-item" onclick="shareToApp('threads')">
+            <div class="share-icon threads">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="white"><path d="M22.18 14.84a7.92 7.92 0 00-.36-.16c-.2-3.32-2-5.22-5.04-5.24h-.04c-1.82 0-3.34.78-4.28 2.2l1.82 1.24c.7-1.06 1.8-1.28 2.46-1.28h.02c.96.02 1.68.28 2.14.82.34.38.56.92.68 1.6a14.3 14.3 0 00-2.74-.12c-2.76.16-4.54 1.72-4.42 3.9.06 1.1.62 2.04 1.56 2.66.8.52 1.82.78 2.88.72 1.4-.08 2.5-.6 3.26-1.56.58-.74.94-1.7 1.1-2.9.66.4 1.14.92 1.42 1.56.44 1.02.46 2.72-.9 4.06-1.2 1.18-2.64 1.68-4.8 1.7-2.42-.02-4.24-.78-5.44-2.3-1.12-1.42-1.7-3.48-1.72-6.12.02-2.64.6-4.7 1.72-6.12 1.2-1.52 3.02-2.28 5.44-2.3 2.38.02 4.18.8 5.36 2.32.58.74 1.02 1.68 1.3 2.76l2.12-.56c-.34-1.38-.9-2.58-1.7-3.58-1.6-2.02-3.98-3.06-7.06-3.08h-.04c-3.06.02-5.42 1.06-7.02 3.1-1.44 1.82-2.18 4.36-2.2 7.54v.04c.02 3.18.76 5.72 2.2 7.54 1.6 2.04 3.96 3.08 7.02 3.1h.04c2.72-.02 4.62-.72 6.2-2.28 2.04-2 1.98-4.5 1.3-6.04-.48-1.1-1.4-2-2.76-2.68zm-5.5 4.78c-1.22.06-2.48-.48-2.54-1.66-.04-.84.6-1.78 2.6-1.9.22-.02.44-.02.64-.02.72 0 1.4.08 2.02.22-.22 2.68-1.4 3.28-2.72 3.36z"/></svg>
+            </div>
+            <span class="share-label">Threads</span>
+        </div>
+        <div class="share-item" onclick="shareToApp('x')">
+            <div class="share-icon x-twitter">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.736l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </div>
+            <span class="share-label">X</span>
+        </div>
+        <div class="share-item" onclick="shareToApp('copy')">
+            <div class="share-icon copy-link">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            </div>
+            <span class="share-label">複製圖片</span>
+        </div>
+    </div>
+    <button id="share-panel-close" onclick="closeSharePanel()">取消</button>
 </div>
 
 <script>
@@ -550,7 +627,7 @@
             document.getElementById('action-buttons').classList.remove('hidden');
         } else if (id === 'main-screen' && drawnCards.length === 0) {
             document.getElementById('action-buttons').classList.remove('hidden');
-            document.getElementById('top-info').classList.remove('hidden'); // 恢復顯示頂部資訊
+            document.getElementById('top-info').classList.remove('hidden');
             document.body.style.touchAction = 'none';
         } else {
             document.body.style.touchAction = 'none';
@@ -662,7 +739,6 @@
         currentCollectionData.diamonds -= cost;
         updateDiamondUI();
 
-        // 沈浸式體驗：抽卡當下隱藏底部與頂部 UI
         document.getElementById('action-buttons').classList.add('hidden');
         document.getElementById('top-info').classList.add('hidden');
 
@@ -781,7 +857,6 @@
             wrap.id = `pack-${i}`;
             wrap.style.zIndex = 50 - i;
             
-            // 使用 CSS 變數動態賦予偏移屬性，保證不覆寫全螢幕置中邏輯
             let offsetX = num > 1 ? (Math.random()-0.5)*20 : 0;
             let offsetY = num > 1 ? (Math.random()-0.5)*20 : 0;
             wrap.style.setProperty('--ox', `${offsetX}px`);
@@ -864,6 +939,10 @@
         }
     }
 
+    // ==========================================
+    // 修改 1 & 2：十連抽卡牌位置重新配置
+    // 縮短排距、提高 y 值（遠離按鍵），放大縮圖
+    // ==========================================
     function showResultCard(idx) {
         const result = drawnCards[idx];
         const stage = document.getElementById('stage');
@@ -873,14 +952,24 @@
         let tx = '-50%', ty = '-50%', tscale = '1';
 
         if(drawnCards.length > 1) { 
-            container.style.width = '20vw';
-            container.style.maxWidth = '80px';
-            tscale = '0.9'; 
+            // 修改 2：card-container 的 width/maxWidth 已在 CSS 中放大
+            // 不再 inline 覆寫，讓 CSS 的 28vw/120px 生效
+            tscale = '1'; 
 
             let x, y;
-            if (idx < 3) { y = '30%'; x = `${20 + idx * 30}%`; } 
-            else if (idx < 7) { y = '55%'; x = `${15 + (idx - 3) * 23.33}%`; } 
-            else { y = '80%'; x = `${20 + (idx - 7) * 30}%`; }
+            // 修改 1：三排 y 值調整
+            // 上排 22%、中排 44%、下排 66%（原本 30/55/80%）
+            // 縮短間距同時將整體往上移，讓底排遠離按鍵
+            if (idx < 3) {
+                y = '22%';
+                x = `${20 + idx * 30}%`;
+            } else if (idx < 7) {
+                y = '44%';
+                x = `${15 + (idx - 3) * 23.33}%`;
+            } else {
+                y = '66%';
+                x = `${20 + (idx - 7) * 30}%`;
+            }
             
             container.style.left = x;
             container.style.top = y;
@@ -890,7 +979,9 @@
             tscale = '1.2';
         }
 
-        container.style.setProperty('--tx', tx); container.style.setProperty('--ty', ty); container.style.setProperty('--tscale', tscale);
+        container.style.setProperty('--tx', tx);
+        container.style.setProperty('--ty', ty);
+        container.style.setProperty('--tscale', tscale);
 
         let cardBackStyle = `background-image:url('${IMG_BACK}'); background-size: 100% 100%;`;
         
@@ -923,7 +1014,7 @@
         if (flippedCount === drawnCards.length) {
             setTimeout(() => { 
                 document.getElementById('action-buttons').classList.remove('hidden'); 
-                document.getElementById('top-info').classList.remove('hidden'); // 抽卡結束後恢復顯示玩家名稱及鑽石
+                document.getElementById('top-info').classList.remove('hidden');
             }, 500);
         }
     }
@@ -990,6 +1081,9 @@
         const img = document.getElementById('fullscreen-card-img');
         
         img.src = imgSrc;
+        img.dataset.type = type;
+        img.dataset.id = id;
+
         if (isCurrentDrawGodPack) {
             img.style.boxShadow = 'var(--platinum-glow)';
         } else {
@@ -1042,6 +1136,203 @@
         }
     }
 
+    // ==========================================
+    // 修改 3：分享功能（截圖合成形式）
+    // 黑色背景 + 光點粒子 + back.png 飛舞 + 卡牌主圖
+    // ==========================================
+    function openSharePanel() {
+        document.getElementById('share-panel').classList.add('open');
+        document.getElementById('share-backdrop').classList.add('open');
+    }
+
+    function closeSharePanel() {
+        document.getElementById('share-panel').classList.remove('open');
+        document.getElementById('share-backdrop').classList.remove('open');
+    }
+
+    async function buildShareCanvas() {
+        const W = 600, H = 840;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        // 1. 黑色背景漸層
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+        const grad = ctx.createRadialGradient(W/2, H/3, 40, W/2, H/3, W*0.8);
+        grad.addColorStop(0, '#1a1a1a');
+        grad.addColorStop(1, '#000');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        // 2. 飛舞的光點（靜態快照）
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        for(let i = 0; i < 60; i++) {
+            const px = Math.random() * W;
+            const py = Math.random() * H;
+            const ps = Math.random() * 2;
+            ctx.beginPath();
+            ctx.arc(px, py, ps, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 3. 飛舞的 back.png（半透明，隨機位置與角度）
+        await new Promise(resolve => {
+            if (backImgObj.complete) { resolve(); return; }
+            backImgObj.onload = resolve;
+        });
+        for(let i = 0; i < 10; i++) {
+            const bx = Math.random() * W;
+            const by = Math.random() * H;
+            const br = Math.random() * Math.PI * 2;
+            const bs = 0.3 + Math.random() * 0.4;
+            const bw = 100 * bs, bh = 140 * bs;
+            ctx.save();
+            ctx.translate(bx, by);
+            ctx.rotate(br);
+            ctx.globalAlpha = 0.18;
+            ctx.drawImage(backImgObj, -bw/2, -bh/2, bw, bh);
+            ctx.restore();
+        }
+        ctx.globalAlpha = 1;
+
+        // 4. 主卡牌圖片（置中，佔約 55% 高度）
+        const cardImg = document.getElementById('fullscreen-card-img');
+        const cardSrc = cardImg.src;
+        await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const cardH = H * 0.55;
+                const cardW = cardH * (63 / 88);
+                const cx = (W - cardW) / 2;
+                const cy = (H - cardH) / 2;
+
+                // 光環
+                const type = cardImg.dataset.type || 'common';
+                let glowColor = '#0055ff';
+                if (type === 'special_limited') glowColor = '#ff0000';
+                else if (type === 'super_rare') glowColor = '#ffd700';
+                else if (type === 'rare') glowColor = '#a020f0';
+
+                ctx.save();
+                ctx.shadowBlur = 40;
+                ctx.shadowColor = glowColor;
+                ctx.drawImage(img, cx, cy, cardW, cardH);
+                ctx.restore();
+
+                // 圓角遮罩
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-atop';
+                ctx.restore();
+
+                resolve();
+            };
+            img.onerror = reject;
+            img.src = cardSrc;
+        });
+
+        // 5. 浮水印
+        ctx.font = 'bold 22px "Microsoft JhengHei", sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.textAlign = 'center';
+        ctx.fillText('Porkémon', W/2, H - 28);
+
+        return canvas;
+    }
+
+    async function shareToApp(target) {
+        closeSharePanel();
+        const hint = document.getElementById('save-hint');
+        hint.innerText = "合成圖片中...";
+        hint.style.opacity = '1';
+
+        try {
+            const canvas = await buildShareCanvas();
+
+            if (target === 'copy') {
+                // 複製圖片到剪貼板
+                canvas.toBlob(async (blob) => {
+                    try {
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': blob })
+                        ]);
+                        hint.innerText = "圖片已複製到剪貼板！";
+                        setTimeout(() => hint.style.opacity = '0', 2500);
+                    } catch(e) {
+                        // fallback: 下載
+                        downloadCanvasAsFile(canvas);
+                        hint.innerText = "已下載圖片";
+                        setTimeout(() => hint.style.opacity = '0', 2500);
+                    }
+                }, 'image/png');
+                return;
+            }
+
+            // 其他平台：使用 Web Share API 或 fallback 下載
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], 'Porkemon_card.png', { type: 'image/png' });
+                const shareData = {
+                    files: [file],
+                    title: 'Porkémon 卡片',
+                    text: '看我抽到的 Porkémon 卡！🐷✨'
+                };
+
+                if (navigator.canShare && navigator.canShare(shareData)) {
+                    try {
+                        await navigator.share(shareData);
+                        hint.style.opacity = '0';
+                    } catch(e) {
+                        if (e.name !== 'AbortError') {
+                            fallbackShareUrl(target, canvas);
+                        } else {
+                            hint.style.opacity = '0';
+                        }
+                    }
+                } else {
+                    // 不支援 Web Share API，嘗試 URL scheme
+                    fallbackShareUrl(target, canvas);
+                }
+            }, 'image/png');
+
+        } catch (err) {
+            console.error('分享失敗:', err);
+            hint.innerText = "分享失敗，請長按圖片儲存";
+            setTimeout(() => hint.style.opacity = '0', 3000);
+        }
+    }
+
+    function downloadCanvasAsFile(canvas) {
+        const a = document.createElement('a');
+        a.download = 'Porkemon_card.png';
+        a.href = canvas.toDataURL('image/png');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function fallbackShareUrl(target, canvas) {
+        // 先下載圖片，再開啟對應 app（用戶可手動貼上）
+        downloadCanvasAsFile(canvas);
+        const hint = document.getElementById('save-hint');
+
+        const urls = {
+            whatsapp: 'https://wa.me/',
+            instagram: 'https://www.instagram.com/',
+            threads: 'https://www.threads.net/',
+            x: 'https://twitter.com/intent/tweet?text=' + encodeURIComponent('看我抽到的 Porkémon 卡！🐷✨')
+        };
+
+        setTimeout(() => {
+            if (urls[target]) window.open(urls[target], '_blank');
+            hint.innerText = "圖片已下載，請在 App 中貼上";
+            setTimeout(() => hint.style.opacity = '0', 3000);
+        }, 500);
+    }
+
+    // ==========================================
+    // 6. 收藏與系列獎勵系統
+    // ==========================================
     async function resetCollection() {
         if(confirm(`確定要重置 ${currentUser} 的收藏與鑽石嗎？此操作無法還原。`)) {
             currentCollectionData = { 
@@ -1058,9 +1349,6 @@
         }
     }
 
-    // ==========================================
-    // 6. 收藏與系列獎勵系統
-    // ==========================================
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
