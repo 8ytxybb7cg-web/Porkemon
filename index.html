@@ -167,7 +167,6 @@
             font-weight: bold; border-radius: 25px; cursor: pointer; white-space: nowrap; flex: 1;
             text-align: center; min-width: 0; 
         }
-        
         .pill-btn { background: transparent; color: #fff; border: 2px solid #fff; border-radius: 50px; padding: 8px 15px; font-size: 14px; font-weight: bold; cursor: pointer; pointer-events: auto; white-space: nowrap; }
 
         /* 收藏頁面 */
@@ -205,7 +204,13 @@
         .card-slot img { width: 100%; height: 100%; object-fit: fill; }
 
         /* 全螢幕放大預覽 */
-        #fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        /* ✅ 修正：移除 hidden class，改用 opacity + pointer-events 控制顯隱 */
+        #fullscreen-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+        }
         #fullscreen-overlay.active { opacity: 1; pointer-events: auto; }
         
         #fullscreen-card-img { height: 60dvh; max-height: 600px; aspect-ratio: 63/88; border-radius: 12px; object-fit: fill; -webkit-user-select: auto; user-select: auto; -webkit-touch-callout: default; pointer-events: auto; }
@@ -288,7 +293,8 @@
     </section>
 </div>
 
-<div id="fullscreen-overlay" class="hidden">
+<!-- ✅ 修正：移除 class="hidden"，由 CSS opacity 控制顯隱，避免 display:none 衝突 -->
+<div id="fullscreen-overlay">
     <img id="fullscreen-card-img" src="" alt="放大卡片" crossorigin="anonymous">
     <div class="long-press-hint">長按圖片可進行儲存</div>
     <div id="save-hint"></div>
@@ -298,6 +304,7 @@
         <button class="pill-btn" onclick="closeFullscreen()">返回</button>
     </div>
 </div>
+
 <script>
     // ---------------- 全域常數與設定 ----------------
     const TOTAL_COMMON = 30;
@@ -310,10 +317,12 @@
     const PACK_IMAGE_URL = 'https://8ytxybb7cg-web.github.io/Porkemon/pack.png';
     const CARD_BACK_URL = 'https://8ytxybb7cg-web.github.io/Porkemon/back.png';
 
-    // Supabase 設定 (請替換為您的實際金鑰)
+    // Supabase 設定
     const SUPABASE_URL = 'https://vqukywuepntwthuzvngh.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxdWt5d3VlcG50d3RodXp2bmdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg1MTAyNjIsImV4cCI6MjA1NDA4NjI2Mn0.zZ_R0u7U9862419_5_9_2_9_5_9_5_9_5_9_5_9_5_9_5_9_5_9_5_9_5_9_5_9_5_9_5_9_5';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // ✅ 修正：避免與 CDN 全域物件 supabase 同名衝突，改用 supabaseClient
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentUser = null;
     let collectionData = { common: [], rare: [], super_rare: [], special_limited: [], diamonds: 100, pity_rare_count: 0, rewards_claimed: [] };
@@ -358,13 +367,14 @@
         currentUser = name;
         localStorage.setItem('porkemon_user', name);
         
-            const { data, error } = await supabaseClient.from('players').select('*').eq('username', name).single();
-
-    if (data) {
-        collectionData = data.data || collectionData;
-    } else {
-        await supabaseClient.from('players').insert([{ username: name, data: collectionData }]);
-    }
+        // ✅ 修正：使用 supabaseClient 取代 supabase
+        const { data, error } = await supabaseClient.from('players').select('*').eq('username', name).single();
+        
+        if (data) {
+            collectionData = data.data || collectionData;
+        } else {
+            await supabaseClient.from('players').insert([{ username: name, data: collectionData }]);
+        }
 
         updateUI();
         showScreen('main-screen');
@@ -435,6 +445,16 @@
                 openPack(wrapper, count);
             }
         };
+
+        // 桌面端支援滑鼠拖動開包
+        slashZone.onmousedown = (e) => { startX = e.clientX; startY = e.clientY; };
+        slashZone.onmouseup = (e) => {
+            const endX = e.clientX;
+            const endY = e.clientY;
+            if (Math.hypot(endX - startX, endY - startY) > 50) {
+                openPack(wrapper, count);
+            }
+        };
     }
 
     function openPack(wrapper, count) {
@@ -457,7 +477,7 @@
         const stage = document.getElementById('stage');
         revealedCount = 0;
         
-        const cardWidth = window.innerWidth * 0.26; // 增加寬度以放大縮圖
+        const cardWidth = window.innerWidth * 0.26;
         const cardHeight = cardWidth * (88/63);
         
         currentPackCards.forEach((card, index) => {
@@ -467,7 +487,7 @@
             
             // 3-4-3 佈局邏輯
             let tx, ty;
-            const vGap = window.innerHeight * 0.12; // 縮減垂直間距
+            const vGap = window.innerHeight * 0.12;
             const hGap = cardWidth * 1.1;
             
             if (count === 1) {
@@ -517,11 +537,9 @@
     function revealCard(container, card, total) {
         container.querySelector('.card-inner').classList.add('is-flipped');
         
-        // 根據稀有度添加特效
         if (card.type === 'super_rare') container.style.boxShadow = 'var(--purple-glow)';
         if (card.type === 'special_limited') container.style.boxShadow = 'var(--platinum-glow)';
 
-        // 紀錄收藏
         if (!collectionData[card.type].includes(card.id)) {
             collectionData[card.type].push(card.id);
         }
@@ -576,7 +594,6 @@
         cardImg.src = img.src;
         await new Promise(r => cardImg.onload = r);
         
-        // 卡牌陰影
         ctx.shadowColor = 'rgba(255, 215, 0, 0.5)';
         ctx.shadowBlur = 50;
         ctx.drawImage(cardImg, canvas.width/2 - 350, canvas.height/2 - 480, 700, 960);
@@ -618,9 +635,10 @@
     }
 
     async function saveProgress() {
-    if (!currentUser) return;
-    await supabaseClient.from('players').update({ data: collectionData }).eq('username', currentUser);
-}
+        if (!currentUser) return;
+        // ✅ 修正：使用 supabaseClient 取代 supabase
+        await supabaseClient.from('players').update({ data: collectionData }).eq('username', currentUser);
+    }
 
     function renderCollection() {
         const content = document.getElementById('collection-content');
@@ -641,6 +659,8 @@
             btn.innerText = tab.label;
             btn.onclick = () => {
                 document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
                 document.getElementById(`sec-${tab.id}`).classList.add('active');
             };
             tabNav.appendChild(btn);
@@ -674,6 +694,60 @@
         const percent = Math.floor((totalOwned / totalPossible) * 100);
         document.getElementById('s1-progress-bar-fill').style.width = `${percent}%`;
         document.getElementById('s1-progress-text').innerText = `${percent}% (${totalOwned}/${totalPossible})`;
+        updateClaimButtons();
+    }
+
+    function updateClaimButtons() {
+        const rewards = [
+            { id: 'btn-claim-common', key: 'common', total: TOTAL_COMMON, rewardKey: 'common', label: `集齊普通 +10💎` },
+            { id: 'btn-claim-rare', key: 'rare', total: TOTAL_RARE, rewardKey: 'rare', label: `集齊稀有 +20💎` },
+            { id: 'btn-claim-sr', key: 'super_rare', total: TOTAL_SUPER_RARE, rewardKey: 'sr', label: `集齊SR +30💎` },
+            { id: 'btn-claim-special', key: 'special_limited', total: TOTAL_SPECIAL_LIMITED, rewardKey: 'special', label: `集齊限定 +50💎` },
+        ];
+
+        rewards.forEach(r => {
+            const btn = document.getElementById(r.id);
+            const owned = collectionData[r.key].length;
+            const claimed = collectionData.rewards_claimed && collectionData.rewards_claimed.includes(r.rewardKey);
+            
+            if (claimed) {
+                btn.className = 'claim-btn claimed';
+                btn.innerText = '已領取 ✓';
+            } else if (owned >= r.total) {
+                btn.className = 'claim-btn ready';
+                btn.innerText = r.label;
+            } else {
+                btn.className = 'claim-btn unmet';
+                btn.innerText = `${owned}/${r.total}`;
+            }
+        });
+
+        // 全收集勳章
+        const allOwned = collectionData.common.length >= TOTAL_COMMON &&
+                         collectionData.rare.length >= TOTAL_RARE &&
+                         collectionData.super_rare.length >= TOTAL_SUPER_RARE &&
+                         collectionData.special_limited.length >= TOTAL_SPECIAL_LIMITED;
+        document.getElementById('special-badge').classList.toggle('hidden', !allOwned);
+    }
+
+    function claimReward(rewardKey) {
+        const rewardMap = { common: 10, rare: 20, sr: 30, special: 50 };
+        const collectionMap = { common: { key: 'common', total: TOTAL_COMMON }, rare: { key: 'rare', total: TOTAL_RARE }, sr: { key: 'super_rare', total: TOTAL_SUPER_RARE }, special: { key: 'special_limited', total: TOTAL_SPECIAL_LIMITED } };
+        
+        const info = collectionMap[rewardKey];
+        if (!info) return;
+
+        if (!collectionData.rewards_claimed) collectionData.rewards_claimed = [];
+        if (collectionData.rewards_claimed.includes(rewardKey)) return;
+        if (collectionData[info.key].length < info.total) return;
+
+        const diamonds = rewardMap[rewardKey];
+        collectionData.diamonds += diamonds;
+        collectionData.rewards_claimed.push(rewardKey);
+        
+        saveProgress();
+        updateUI();
+        updateCollectionProgress();
     }
 
     function openFullscreen(src) {
