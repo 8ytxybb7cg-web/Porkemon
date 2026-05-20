@@ -588,11 +588,11 @@
         const lastLogin = lastLoginDate ? new Date(lastLoginDate) : new Date(0);
         
         if (lastLogin < baseline && lastLoginDate !== null) { 
-            currentCollectionData.diamonds = (currentCollectionData.diamonds || 0) + 300;
+            currentCollectionData.diamonds = (currentCollectionData.diamonds || 0) + 100;
             if (currentCollectionData.diamonds > 99999) currentCollectionData.diamonds = 99999;
             lastLoginDate = now.toISOString();
             currentCollectionData.lastLoginDate = lastLoginDate;
-            setTimeout(() => { alert("🎉 每日登入獎勵！已領取 300 💎"); }, 200);
+            setTimeout(() => { alert("🎉 每日登入獎勵！已領取 100 💎"); }, 200);
             return true;
         }
         return false;
