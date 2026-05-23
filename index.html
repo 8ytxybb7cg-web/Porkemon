@@ -565,10 +565,10 @@
             currentCollectionData.diamonds = 0;
         }
         if (!lastLoginDate) {
-            currentCollectionData.diamonds = 60;
+            currentCollectionData.diamonds = 300;
             lastLoginDate = new Date().toISOString();
             currentCollectionData.lastLoginDate = lastLoginDate; 
-            setTimeout(() => { alert("🎉 歡迎新玩家！已發放初始 60 💎"); }, 200);
+            setTimeout(() => { alert("🎉 歡迎新玩家！已發放初始 300 💎"); }, 200);
             return true;
         }
         return false;
@@ -693,7 +693,7 @@
             console.error("Supabase 發生例外狀況:", err);
             alert("雲端同步異常...\n\n自動啟用「單機離線模式」。");
             currentCollectionData = { 
-                common: [], rare: [], super_rare: [], special_limited: [], diamonds: 60, pity_rare_count: 0,
+                common: [], rare: [], super_rare: [], special_limited: [], diamonds: 300, pity_rare_count: 0,
                 rewards_claimed: { s1_common: false, s1_rare: false, s1_sr: false, s1_special: false }
             };
             lastLoginDate = new Date().toISOString();
@@ -1358,7 +1358,7 @@
         if(confirm(`確定要重置 ${currentUser} 的收藏與鑽石嗎？此操作無法還原。`)) {
             currentCollectionData = { 
                 common: [], rare: [], super_rare: [], special_limited: [], 
-                diamonds: 60, pity_rare_count: 0,
+                diamonds: 300, pity_rare_count: 0,
                 rewards_claimed: { s1_common: false, s1_rare: false, s1_sr: false, s1_special: false }
             };
             lastLoginDate = new Date().toISOString();
