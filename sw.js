@@ -1,4 +1,4 @@
-const CACHE_NAME = 'porkemon-v2.2';
+const CACHE_NAME = 'porkemon-v2.3';
 const BASE_URL = "https://raw.githubusercontent.com/8ytxybb7cg-web/Porkemon/main/";
 
 // 核心資源預載清單
